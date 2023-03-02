@@ -6,7 +6,7 @@
 *-----------------------------------------------------------
     ORG    $1000
 START:                  ; first instruction of program
-
+* BASICALLY CONSTANTS
 *-----------------------------------------------------------
 * Section       : Trap Codes
 * Description   : Trap Codes used throughout StarterKit
@@ -62,7 +62,11 @@ W           EQU         $57         ; W ASCII KeyCode
 A           EQU         $41         ; A ASCII Keycode
 S           EQU         $53         ; S ASCII Keycode   
 
-
+*-----------------------------------------------------------
+* Section       : Speed
+* Description   : movement speed 
+*-----------------------------------------------------------
+SPEED       EQU         10          ; speed for character
 *-----------------------------------------------------------
 * Subroutine    : Initialise
 * Description   : Initialise game data into memory such as 
@@ -90,8 +94,8 @@ INITIALISE:
 
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
     MOVE.W  SCREEN_H,   D1          ; Place Screen width in D1
-    DIVU    #02,        D1          ; divide by 2 for center on Y Axis
-    MOVE.L  D1,         PLAYER_Y    ; Players Y Position
+    SUB.L    #50,        D1          ; divide by 2 for center on Y Axis
+    MOVE.L  #0,         PLAYER_Y    ; Players Y Position
 
     ; Initialise Player Score
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
@@ -103,10 +107,6 @@ INITIALISE:
     MOVE.B  #PLYR_DFLT_V,D1         ; Init Player Velocity
     MOVE.L  D1,         PLYR_VELOCITY
 
-    ; Initialise Player Gravity
-    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    MOVE.L  #PLYR_DFLT_G,D1         ; Init Player Gravity
-    MOVE.L  D1,         PLYR_GRAVITY
 
     ; Initialize Player on Ground
     MOVE.L  #GND_TRUE,  PLYR_ON_GND ; Init Player on Ground
@@ -117,9 +117,9 @@ INITIALISE:
     MOVE.L  D1,         ENEMY_X     ; Enemy X Position
 
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    MOVE.W  SCREEN_H,   D1          ; Place Screen width in D1
-    DIVU    #02,        D1          ; divide by 2 for center on Y Axis
-    MOVE.L  D1,         ENEMY_Y     ; Enemy Y Position
+    MOVE.W  SCREEN_H,   D1         ; Place Screen width in D1
+    DIVU    #02,        D1         ; divide by 2 for center on Y Axis
+    MOVE.L  #0,         ENEMY_Y     ; Enemy Y Position
 
     ; Enable the screen back buffer(see easy 68k help)
 	MOVE.B  #TC_DBL_BUF,D0          ; 92 Enables Double Buffer
@@ -141,12 +141,24 @@ GAME:
     BSR     PLAY_RUN                ; Play Run Wav
 GAMELOOP:
     ; Main Gameloop
+    MOVE.B #8, D0                   ; D0 IS ONLY USED FOR COMMANDS, OUTPUST FROM THIS GOINTO OTHER DATA REGISTERS, THIS WILL BE STORED IN D1 
+    TRAP #15     
+    MOVE.L D1, DELTA_TIME                   ; TRAP 15 RUNS COMMAND 15   
     BSR     INPUT                   ; Check Keyboard Input
     BSR     UPDATE                  ; Update positions and points
-    BSR     IS_PLAYER_ON_GND        ; Check if player is on ground
+   ; BSR     IS_PLAYER_ON_GND        ; Check if player is on ground
     BSR     CHECK_COLLISIONS        ; Check for Collisions
     BSR     DRAW                    ; Draw the Scene
-    BRA     GAMELOOP                ; Loop back to GameLoop
+    
+
+DELTA_t:
+    MOVE.B #8, D0                   ;CURRENT TIME 
+    TRAP #15  
+    SUB.L DELTA_TIME, D1            ; TAKING AWAY DELTATIME FROM CURRENT TO CHECK REMAINDER, 
+    
+    CMP.L #4, D1
+    BMI.S DELTA_t                     ; if deltam time is lesser or equal to 17; branch lesser or equal to 
+    BRA GAMELOOP
 
 *-----------------------------------------------------------
 * Subroutine    : Input
@@ -156,36 +168,24 @@ INPUT:
     ; Process Input
     CLR.L   D1                      ; Clear Data Register
     MOVE.B  #TC_KEYCODE,D0          ; Listen for Keys
-    TRAP    #15                     ; Trap (Perform action)
-    MOVE.B  D1,         D2          ; Move last key D1 to D2
-    CMP.B   #00,        D2          ; Key is pressed
-    BEQ     PROCESS_INPUT           ; Process Key
-    TRAP    #15                     ; Trap for Last Key
-    ; Check if key still pressed
-    CMP.B   #$FF,       D1          ; Is it still pressed
-    BEQ     PROCESS_INPUT           ; Process Last Key
+    MOVE.L #$57415344,D1            ; ALL THE INPUTS PUT IN D1 WASD, IN ONE BYTE
+    TRAP   #15                      ; DEXCUTES ABOVE AND CHECKS IF ny have been pushed
+
+   * CHECKS CORRESPONG NUMBERS ARE BEING PRESSED
+    CMP.L  #$FF000000, D1           ; W
+    BEQ    MOVE_UP
+    
+    CMP.L  #$00FF0000, D1           ; A
+    BEQ    MOVE_LEFT
+
+    CMP.L  #$0000FF00, D1           ; S
+    BEQ    MOVE_DOWN
+
+    CMP.L  #$000000FF, D1           ; D
+    BEQ    MOVE_RIGHT
     RTS                             ; Return to subroutine
 
-*-----------------------------------------------------------
-* Subroutine    : Process Input
-* Description   : Branch based on keys pressed
-*-----------------------------------------------------------
-PROCESS_INPUT:
-    MOVE.L  D2,         CURRENT_KEY ; Put Current Key in Memory
-    CMP.L   #ESCAPE,    CURRENT_KEY ; Is Current Key Escape
-    BEQ     EXIT                    ; Exit if Escape
-    CMP.L   #SPACEBAR,  CURRENT_KEY ; Is Current Key Spacebar
-    BEQ     JUMP
-    CMP.L   #D, CURRENT_KEY         ; is current key D
-    BEQ     MOVE_RIGHT
-    CMP.L   #A,         CURRENT_KEY ; is current key A
-    BEQ     MOVE_LEFT
-    CMP.L   #W,         CURRENT_KEY ; is current key W
-    BEQ     MOVE_UP   
-    CMP.L   #S,         CURRENT_KEY ; is current key S
-    BEQ     MOVE_DOWN
-    BRA     IDLE                  ; Or Idle
-    RTS                             ; Return to subroutine
+
 
 *-----------------------------------------------------------
 * Subroutine    : Update
@@ -195,8 +195,6 @@ UPDATE:
     ; Update the Players Positon based on Velocity and Gravity
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
     MOVE.L  PLYR_VELOCITY, D1       ; Fetch Player Velocity
-    MOVE.L  PLYR_GRAVITY, D2        ; Fetch Player Gravity
-    ADD.L   D2,         D1          ; Add Gravity to Velocity
     MOVE.L  D1,         PLYR_VELOCITY ; Update Player Velocity
     ADD.L   PLAYER_Y,   D1          ; Add Velocity to Player
     MOVE.L  D1,         PLAYER_Y    ; Update Players Y Position 
@@ -464,7 +462,7 @@ MOVE_RIGHT:
     BEQ     PERFORM_MOVE_RIGHT  ; do actual move ment to right
     BRA     MOVEMENT_DONE       ; return back 
 PERFORM_MOVE_RIGHT:
-    ADD.L   #01, PLAYER_X       ; adds movement to the position
+    ADD.L   #SPEED, PLAYER_X       ; adds movement to the position
 
 
 
@@ -478,7 +476,7 @@ MOVE_LEFT:
     BRA     MOVEMENT_DONE      ; RETURN BACK
 
 PERFORM_MOVE_LEFT:  
-    SUB.L #01, PLAYER_X         ; takes away movement from position
+    SUB.L #SPEED, PLAYER_X         ; takes away movement from position
 
 *-----------------------------------------------------------
 * Subroutine    : MOVE_UP
@@ -669,6 +667,11 @@ EXIT:
 * Description   : Messages to Print on Console, names should be
 * self documenting
 *-----------------------------------------------------------
+
+* BASICALLY VARIABLES DECALRED AT BTTOM 
+* dc.b is text
+* ds.b is number 
+* becarefull how you store l/b, long/byte
 SCORE_MSG       DC.B    'Score : ', 0       ; Score Message
 KEYCODE_MSG     DC.B    'KeyCode : ', 0     ; Keycode Message
 JUMP_MSG        DC.B    'Jump....', 0       ; Jump Message
@@ -720,6 +723,16 @@ PLYR_ON_GND     DS.L    01  ; Reserve Space for Player on Ground
 ENEMY_X         DS.L    01  ; Reserve Space for Enemy X Position
 ENEMY_Y         DS.L    01  ; Reserve Space for Enemy Y Position
 
+
+*-----------------------------------------------------------
+* Section       : TIme
+* Description   : Sound files, which are then loaded and given
+* an address in memory, they take a longtime to process and play
+* so keep the files small. Used https://voicemaker.in/ to 
+* generate and Audacity to convert MP3 to WAV
+*-----------------------------------------------------------
+DELTA_TIME      DS.L   01 ; empty 
+
 *-----------------------------------------------------------
 * Section       : Sounds
 * Description   : Sound files, which are then loaded and given
@@ -732,6 +745,7 @@ RUN_WAV         DC.B    'run.wav',0         ; Run Sound
 OPPS_WAV        DC.B    'opps.wav',0        ; Collision Opps
 
     END    START        ; last line of source
+
 *~Font name~Courier New~
 *~Font size~10~
 *~Tab type~1~
