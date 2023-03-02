@@ -41,8 +41,12 @@ RUN_INDEX   EQU         00          ; Player Run Sound Index
 JMP_INDEX   EQU         01          ; Player Jump Sound Index  
 OPPS_INDEX  EQU         02          ; Player Opps Sound Index
 
-ENMY_W_INIT EQU         08          ; Enemy initial Width
-ENMY_H_INIT EQU         08          ; Enemy initial Height
+ENMY_W_INIT EQU         10          ; Enemy initial Width
+ENMY_H_INIT EQU         10          ; Enemy initial Height
+
+BULLET_W    EQU         05          ; bullet width
+BULLET_H    EQU         05          ; bullet height
+
 
 *-----------------------------------------------------------
 * Section       : Game Stats
@@ -66,7 +70,8 @@ S           EQU         $53         ; S ASCII Keycode
 * Section       : Speed
 * Description   : movement speed 
 *-----------------------------------------------------------
-SPEED       EQU         10          ; speed for character
+SPEED           EQU         10          ; speed for character
+BULLET_SPEED    EQU         20          ; speed for bullet
 *-----------------------------------------------------------
 * Subroutine    : Initialise
 * Description   : Initialise game data into memory such as 
@@ -93,9 +98,9 @@ INITIALISE:
     MOVE.L  D1,         PLAYER_X    ; Players X Position
 
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    MOVE.W  SCREEN_H,   D1          ; Place Screen width in D1
-    SUB.L    #50,        D1          ; divide by 2 for center on Y Axis
-    MOVE.L  #0,         PLAYER_Y    ; Players Y Position
+    * MOVE.W  SCREEN_H,   D1          ; Place Screen width in D1
+    * SUB.L    #50,        D1          ; divide by 2 for center on Y Axis
+    MOVE.L  #450,         PLAYER_Y    ; Players Y Position
 
     ; Initialise Player Score
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
@@ -114,12 +119,27 @@ INITIALISE:
     ; Initial Position for Enemy
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
     MOVE.W  SCREEN_W,   D1          ; Place Screen width in D1
-    MOVE.L  D1,         ENEMY_X     ; Enemy X Position
+    MOVE.L  #200,         ENEMY_X     ; Enemy X Position
 
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
     MOVE.W  SCREEN_H,   D1         ; Place Screen width in D1
     DIVU    #02,        D1         ; divide by 2 for center on Y Axis
-    MOVE.L  #0,         ENEMY_Y     ; Enemy Y Position
+    MOVE.L  #200,         ENEMY_Y     ; Enemy Y Position
+
+    ; intitial pos for test bullet
+    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
+    MOVE.W  #100,   D1          ; Place Screen width in D1
+    MOVE.L  D1,         BULLET_X     ; Enemy X Position
+
+    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
+    MOVE.W  #100,   D1         ; Place Screen width in D1
+    ;DIVU    #02,        D1         ; divide by 2 for center on Y Axis
+    MOVE.L  #100,   BULLET_Y     ; Enemy Y Position
+
+    ; initialisation of boolean for bullet
+    CLR.L D1
+    MOVE.W #0, D1
+    MOVE.B D1, BEEN_SHOT
 
     ; Enable the screen back buffer(see easy 68k help)
 	MOVE.B  #TC_DBL_BUF,D0          ; 92 Enables Double Buffer
@@ -146,7 +166,8 @@ GAMELOOP:
     MOVE.L D1, DELTA_TIME                   ; TRAP 15 RUNS COMMAND 15   
     BSR     INPUT                   ; Check Keyboard Input
     BSR     UPDATE                  ; Update positions and points
-   ; BSR     IS_PLAYER_ON_GND        ; Check if player is on ground
+    BSR     UPDATE_BULLET
+    ;BSR     IS_PLAYER_ON_GND        ; Check if player is on ground
     BSR     CHECK_COLLISIONS        ; Check for Collisions
     BSR     DRAW                    ; Draw the Scene
     
@@ -160,6 +181,32 @@ DELTA_t:
     BMI.S DELTA_t                     ; if deltam time is lesser or equal to 17; branch lesser or equal to 
     BRA GAMELOOP
 
+
+UPDATE_BULLET:
+    BSR CHECK_FOR_BULLET_RESPAWN
+    CMP.B #0, BEEN_SHOT
+    BEQ BULLET_TRACK_PLAYER ; if the bullet has not been shot will track player
+    BRA SHOOT_BULLET
+    RTS
+
+CHECK_FOR_BULLET_RESPAWN:
+    CMP.L #0, BULLET_Y
+    BLT RESPAWN_BULLET
+    RTS
+
+RESPAWN_BULLET:
+    SUB.L #1, BEEN_SHOT
+    RTS
+    
+
+BULLET_TRACK_PLAYER:
+    MOVE.L PLAYER_X, BULLET_X
+    MOVE.L PLAYER_Y, BULLET_Y
+    RTS
+
+SHOOT_BULLET:
+    SUB.L #10, BULLET_Y
+    RTS
 *-----------------------------------------------------------
 * Subroutine    : Input
 * Description   : Process Keyboard Input
@@ -168,12 +215,12 @@ INPUT:
     ; Process Input
     CLR.L   D1                      ; Clear Data Register
     MOVE.B  #TC_KEYCODE,D0          ; Listen for Keys
-    MOVE.L #$57415344,D1            ; ALL THE INPUTS PUT IN D1 WASD, IN ONE BYTE
+    MOVE.L #$20415344,D1            ; ALL THE INPUTS PUT IN D1 WASD, IN ONE BYTE
     TRAP   #15                      ; DEXCUTES ABOVE AND CHECKS IF ny have been pushed
 
    * CHECKS CORRESPONG NUMBERS ARE BEING PRESSED
-    CMP.L  #$FF000000, D1           ; W
-    BEQ    MOVE_UP
+    CMP.L  #$FF000000, D1           ; SPACE
+    BEQ    SHOOT
     
     CMP.L  #$00FF0000, D1           ; A
     BEQ    MOVE_LEFT
@@ -244,6 +291,7 @@ DRAW:
     BSR     DRAW_PLYR_DATA          ; Draw Draw Score, HUD, Player X and Y
     BSR     DRAW_PLAYER             ; Draw Player
     BSR     DRAW_ENEMY              ; Draw Enemy
+    BSR     DRAW_BULLET             ; draw bullet
     RTS                             ; Return to subroutine
 
 *-----------------------------------------------------------
@@ -463,7 +511,7 @@ MOVE_RIGHT:
     BRA     MOVEMENT_DONE       ; return back 
 PERFORM_MOVE_RIGHT:
     ADD.L   #SPEED, PLAYER_X       ; adds movement to the position
-
+    RTS
 
 
 
@@ -477,17 +525,17 @@ MOVE_LEFT:
 
 PERFORM_MOVE_LEFT:  
     SUB.L #SPEED, PLAYER_X         ; takes away movement from position
+    RTS
 
 *-----------------------------------------------------------
 * Subroutine    : MOVE_UP
 * Description   : Perform a move up
 *-----------------------------------------------------------
-MOVE_UP:
-    BEQ     PERFORM_MOVE_UP  ; do actual movement left
+SHOOT:
+    ADD.L #01, BEEN_SHOT  ; do actual movement left
     BRA     MOVEMENT_DONE      ; RETURN BACK
+    RTS
 
-PERFORM_MOVE_UP:  
-    SUB.L #01, PLAYER_Y         ; takes away movement from position
 
 *-----------------------------------------------------------
 * Subroutine    : MOVE_DOWN
@@ -496,6 +544,7 @@ PERFORM_MOVE_UP:
 MOVE_DOWN:
     BEQ     PERFORM_MOVE_DOWN   ; do actual movement down
     BRA     MOVEMENT_DONE     ; RETURN BACK
+    RTS
 
 PERFORM_MOVE_DOWN:  
     ADD.L #01, PLAYER_Y         ; takes away movement from position
@@ -590,6 +639,30 @@ DRAW_ENEMY:
     ADD.L   #ENMY_W_INIT,   D3      ; Width
     MOVE.L  ENEMY_Y,    D4 
     ADD.L   #ENMY_H_INIT,   D4      ; Height
+    
+    ; Draw Enemy    
+    MOVE.B  #87,        D0          ; Draw Enemy
+    TRAP    #15                     ; Trap (Perform action)
+    RTS                             ; Return to subroutine
+
+
+*-----------------------------------------------------------
+* Subroutine    : Draw bullet
+* Description   : Draw Enemy bullet
+*-----------------------------------------------------------
+DRAW_BULLET:
+; Set Pixel Colors
+    MOVE.L  #AQUA,       D1          ; Set Background color
+    MOVE.B  #80,        D0          ; Task for Background Color
+    TRAP    #15                     ; Trap (Perform action)
+
+    ; Set X, Y, Width and Height
+    MOVE.L  BULLET_X,    D1          ; X
+    MOVE.L  BULLET_Y,    D2          ; Y
+    MOVE.L  BULLET_X,    D3
+    ADD.L   #BULLET_W,   D3      ; Width
+    MOVE.L  BULLET_Y,    D4 
+    ADD.L   #BULLET_H,   D4      ; Height
     
     ; Draw Enemy    
     MOVE.B  #87,        D0          ; Draw Enemy
@@ -694,6 +767,8 @@ EXIT_MSG        DC.B    'Exiting....', 0    ; Exit Message
 *-----------------------------------------------------------
 WHITE           EQU     $00FFFFFF
 RED             EQU     $000000FF
+AQUA            EQU     $00FFFF00
+
 
 *-----------------------------------------------------------
 * Section       : Screen Size
@@ -702,6 +777,13 @@ RED             EQU     $000000FF
 SCREEN_W        DS.W    01  ; Reserve Space for Screen Width
 SCREEN_H        DS.W    01  ; Reserve Space for Screen Height
 
+*-----------------------------------------------------------
+* Section       : Bullet status
+* Description   : whether bullet has been shot or not
+* 0 = false
+* 1 = true
+*-----------------------------------------------------------
+BEEN_SHOT       DS.L    01      ; reserve of space
 *-----------------------------------------------------------
 * Section       : Keyboard Input
 * Description   : Used for storing Keypresses
@@ -723,6 +805,8 @@ PLYR_ON_GND     DS.L    01  ; Reserve Space for Player on Ground
 ENEMY_X         DS.L    01  ; Reserve Space for Enemy X Position
 ENEMY_Y         DS.L    01  ; Reserve Space for Enemy Y Position
 
+BULLET_X        DS.L   01   ; space for bullet x pos    
+BULLET_Y        DS.L   01   ; space for bullet y pos
 
 *-----------------------------------------------------------
 * Section       : TIme
@@ -745,6 +829,7 @@ RUN_WAV         DC.B    'run.wav',0         ; Run Sound
 OPPS_WAV        DC.B    'opps.wav',0        ; Collision Opps
 
     END    START        ; last line of source
+
 
 *~Font name~Courier New~
 *~Font size~10~
