@@ -136,10 +136,12 @@ INITIALISE:
     ;DIVU    #02,        D1         ; divide by 2 for center on Y Axis
     MOVE.L  #100,   BULLET_Y     ; Enemy Y Position
 
-    ; initialisation of boolean for bullet
+    ; initialisation of booleans for bullet been shot and enemy moving right
     CLR.L D1
     MOVE.W #0, D1
     MOVE.B D1, BEEN_SHOT
+    MOVE.B D1, ENEMY_MOVING_R ; makes false so is moving left to start
+
 
     ; Enable the screen back buffer(see easy 68k help)
 	MOVE.B  #TC_DBL_BUF,D0          ; 92 Enables Double Buffer
@@ -167,6 +169,7 @@ GAMELOOP:
     BSR     INPUT                   ; Check Keyboard Input
     BSR     UPDATE                  ; Update positions and points
     BSR     UPDATE_BULLET
+    BSR     UPDATE_ENEMY
     ;BSR     IS_PLAYER_ON_GND        ; Check if player is on ground
     BSR     CHECK_COLLISIONS        ; Check for Collisions
     BSR     DRAW                    ; Draw the Scene
@@ -188,6 +191,22 @@ UPDATE_BULLET:
     BEQ BULLET_TRACK_PLAYER ; if the bullet has not been shot will track player
     BRA SHOOT_BULLET
     RTS
+
+UPDATE_ENEMY:
+    CMP.B #0, ENEMY_MOVING_R
+    BEQ MOVE_ENEMY_LEFT
+    BRA MOVE_ENEMY_RIGHT
+    RTS
+
+
+MOVE_ENEMY_RIGHT:
+    ADD.L #1, ENEMY_X
+    RTS
+
+MOVE_ENEMY_LEFT:
+    SUB.L #1, ENEMY_X
+    RTS
+    
 
 CHECK_FOR_BULLET_RESPAWN:
     CMP.L #0, BULLET_Y
@@ -816,9 +835,10 @@ PLYR_ON_GND     DS.L    01  ; Reserve Space for Player on Ground
 
 ENEMY_X         DS.L    01  ; Reserve Space for Enemy X Position
 ENEMY_Y         DS.L    01  ; Reserve Space for Enemy Y Position
+ENEMY_MOVING_R        DS.L    01  ; RES SPACE FOR MOVING RIGHT BOOLEAN
 
-BULLET_X        DS.L   01   ; space for bullet x pos    
-BULLET_Y        DS.L   01   ; space for bullet y pos
+BULLET_X        DS.L    01   ; space for bullet x pos    
+BULLET_Y        DS.L    01   ; space for bullet y pos
 
 *-----------------------------------------------------------
 * Section       : TIme
