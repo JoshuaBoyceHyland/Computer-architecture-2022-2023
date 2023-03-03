@@ -219,9 +219,17 @@ INPUT:
     TRAP   #15                      ; DEXCUTES ABOVE AND CHECKS IF ny have been pushed
 
    * CHECKS CORRESPONG NUMBERS ARE BEING PRESSED
+    CMP.L  #$FFFF0000, D1           ; SPACE
+    BEQ    SHOOT
+    BEQ    MOVE_LEFT
+
+    CMP.L  #$FF0000FF, D1           ; SPACE
+    BEQ    SHOOT
+    BEQ    MOVE_RIGHT
+
     CMP.L  #$FF000000, D1           ; SPACE
     BEQ    SHOOT
-    
+
     CMP.L  #$00FF0000, D1           ; A
     BEQ    MOVE_LEFT
 
@@ -519,6 +527,10 @@ PERFORM_MOVE_RIGHT:
 * Subroutine    : MOVE_LEFT
 * Description   : Perform a move left
 *-----------------------------------------------------------
+* MOVE_LEFT_SHOOT:
+*     ADD.L #01, BEEN_SHOT  ; do actual movement left
+*     BEQ     PERFORM_MOVE_LEFT   ; do actual movement left
+*     BRA     MOVEMENT_DONE      ; RETURN BACK
 MOVE_LEFT:
     BEQ     PERFORM_MOVE_LEFT   ; do actual movement left
     BRA     MOVEMENT_DONE      ; RETURN BACK
