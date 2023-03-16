@@ -169,7 +169,7 @@ GAMELOOP:
     BSR     INPUT                   ; Check Keyboard Input
     BSR     UPDATE                  ; Update positions and points
     BSR     UPDATE_BULLET
-    BSR     UPDATE_ENEMY
+    ;BSR     UPDATE_ENEMY
     ;BSR     IS_PLAYER_ON_GND        ; Check if player is on ground
     BSR     CHECK_COLLISIONS        ; Check for Collisions
     BSR     DRAW                    ; Draw the Scene
@@ -714,27 +714,28 @@ CHECK_COLLISIONS:
     CLR.L   D1                      ; Clear D1
     CLR.L   D2                      ; Clear D2
 PLAYER_X_LTE_TO_ENEMY_X_PLUS_W:
-    MOVE.L  PLAYER_X,   D1          ; Move Player X to D1
+    MOVE.L  Bullet_X,   D1          ; Move Player X to D1
     MOVE.L  ENEMY_X,    D2          ; Move Enemy X to D2
-    ADD.L   ENMY_W_INIT,D2          ; Set Enemy width X + Width
-    CMP.L   D1,         D2          ; Do the Overlap ?
-    BLE     PLAYER_X_PLUS_W_LTE_TO_ENEMY_X  ; Less than or Equal ?
+  ;  ADD.L   ENMY_W_INIT,D2          ; Set Enemy width X + Width
+    CMP.L   D1,         D2       ; Do the Overlap ?
+    BGE     PLAYER_X_PLUS_W_LTE_TO_ENEMY_X ; Less than or Equal ?
     BRA     COLLISION_CHECK_DONE    ; If not no collision
 PLAYER_X_PLUS_W_LTE_TO_ENEMY_X:     ; Check player is not  
-    ADD.L   PLYR_W_INIT,D1          ; Move Player Width to D1
-    MOVE.L  ENEMY_X,    D2          ; Move Enemy X to D2
-    CMP.L   D1,         D2          ; Do they OverLap ?
-    BGE     PLAYER_Y_LTE_TO_ENEMY_Y_PLUS_H  ; Less than or Equal
+    ADD.L   Bullet_X,       D1          ; Move Player Width to D1
+    MOVE.L  ENEMY_X,        D2          ; Move Enemy X to D2
+    ADD.L   #ENMY_W_INIT,    D2
+    CMP.L   D1,             D2          ; Do they OverLap ?
+    BLE     PLAYER_Y_LTE_TO_ENEMY_Y_PLUS_H ; Less than or Equal
     BRA     COLLISION_CHECK_DONE    ; If not no collision   
 PLAYER_Y_LTE_TO_ENEMY_Y_PLUS_H:     
-    MOVE.L  PLAYER_Y,   D1          ; Move Player Y to D1
+    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
     MOVE.L  ENEMY_Y,    D2          ; Move Enemy Y to D2
-    ADD.L   ENMY_H_INIT,D2          ; Set Enemy Height to D2
+    ;ADD.L   ENMY_H_INIT,D2          ; Set Enemy Height to D2
     CMP.L   D1,         D2          ; Do they Overlap ?
-    BLE     PLAYER_Y_PLUS_H_LTE_TO_ENEMY_Y  ; Less than or Equal
+    BGE     COLLISION  ; Less than or Equal
     BRA     COLLISION_CHECK_DONE    ; If not no collision 
 PLAYER_Y_PLUS_H_LTE_TO_ENEMY_Y:     ; Less than or Equal ?
-    ADD.L   PLYR_H_INIT,D1          ; Add Player Height to D1
+    ADD.L   #Bullet_H,D1          ; Add Player Height to D1
     MOVE.L  ENEMY_Y,    D2          ; Move Enemy Height to D2  
     CMP.L   D1,         D2          ; Do they OverLap ?
     BGE     COLLISION               ; Collision !
@@ -748,6 +749,7 @@ COLLISION_CHECK_DONE:               ; No Collision Update points
 COLLISION:
     BSR     PLAY_OPPS               ; Play Opps Wav
     MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
+    SUB.L  #800, ENEMY_X
     RTS                             ; Return to subroutine
 
 *-----------------------------------------------------------
@@ -861,6 +863,7 @@ RUN_WAV         DC.B    'run.wav',0         ; Run Sound
 OPPS_WAV        DC.B    'opps.wav',0        ; Collision Opps
 
     END    START        ; last line of source
+
 
 
 *~Font name~Courier New~
