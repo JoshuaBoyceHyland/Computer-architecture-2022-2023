@@ -71,8 +71,9 @@ S           EQU         $53         ; S ASCII Keycode
 * Section       : Speed
 * Description   : movement speed 
 *-----------------------------------------------------------
-SPEED           EQU         10          ; speed for character
-BULLET_SPEED    EQU         20          ; speed for bullet
+SPEED           EQU         20          ; speed for character`   
+ENEMY_SPEED     EQU         05  ; will get faster over time   `
+BULLET_SPEED    EQU         80          ; speed for bullet
 *-----------------------------------------------------------
 * Subroutine    : Initialise
 * Description   : Initialise game data into memory such as 
@@ -117,17 +118,6 @@ INITIALISE:
     ; Initialize Player on Ground
     MOVE.L  #GND_TRUE,  PLYR_ON_GND ; Init Player on Ground
 
-    ; Initial Position for Enemy
-    * CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    * MOVE.W  SCREEN_W,   D1          ; Place Screen width in D1
-    * MOVE.L  #200,         ENEMY_X     ; Enemy X Position
-
-    * CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    * MOVE.W  SCREEN_H,   D1         ; Place Screen width in D1
-    * DIVU    #02,        D1         ; divide by 2 for center on Y Axis
-    * MOVE.L  #200,         ENEMY_Y     ; Enemy Y Position
-   ; BRA INITIALISE_ENEMYS
-
     ; intitial pos for test bullet
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
     MOVE.W  #100,   D1          ; Place Screen width in D1
@@ -163,18 +153,45 @@ INITIALISE_ENEMYS:
     MOVE.W  #100,   D1          ; Place Screen width in D1
     MOVE.L  D1,         ENEMY_1_X     ; Enemy X Position
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    MOVE.W  #200,   D1          ; Place Screen width in D1
+    MOVE.W  #0,   D1          ; Place Screen width in D1
+    SUB.L   #10, D1
     MOVE.L  D1,         ENEMY_1_Y     ; Enemy X Position
 
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
     MOVE.W  #200,   D1          ; Place Screen width in D1
     MOVE.L  D1,         ENEMY_2_X     ; Enemy X Position
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    MOVE.W  #200,   D1          ; Place Screen width in D1
+    MOVE.W  #0,   D1          ; Place Screen width in D1
+    SUB.L   #200, D1
     MOVE.L  D1,         ENEMY_2_Y     ; Enemy X Position
 
+    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
+    MOVE.W  #300,   D1          ; Place Screen width in D1
+    MOVE.L  D1,         ENEMY_3_X     ; Enemy X Position
+    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
+    MOVE.W  #00,   D1          ; Place Screen width in D1
+    SUB.L   #300, D1
+    MOVE.L  D1,         ENEMY_3_Y     ; Enemy X Position
 
+    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
+    MOVE.W  #400,   D1          ; Place Screen width in D1
+    MOVE.L  D1,         ENEMY_4_X     ; Enemy X Position
+    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
+    MOVE.W  #0,   D1          ; Place Screen width in D1
+    SUB.L   #250, D1
+    MOVE.L  D1,         ENEMY_4_Y     ; Enemy X Position
 
+    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
+    MOVE.W  #500,   D1          ; Place Screen width in D1
+    MOVE.L  D1,         ENEMY_5_X     ; Enemy X Position
+    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
+    MOVE.W  #0,   D1          ; Place Screen width in D1
+    SUB.L   #400, D1
+    MOVE.L  D1,         ENEMY_5_Y     ; Enemy X Position
+
+    * CLR.L   D1
+    * MOVE.L  #5,    D1
+    * MOVE.L  D1,     ENEMY_SPEED
 
 
 
@@ -194,7 +211,7 @@ GAMELOOP:
     BSR     INPUT                   ; Check Keyboard Input
     BSR     UPDATE                  ; Update positions and points
     BSR     UPDATE_BULLET
-    ;BSR     UPDATE_ENEMY
+    BSR     UPDATE_ENEMYS
     ;BSR     IS_PLAYER_ON_GND        ; Check if player is on ground
     BSR     CHECK_COLLISIONS        ; Check for Collisions
     BSR     DRAW                    ; Draw the Scene
@@ -217,21 +234,101 @@ UPDATE_BULLET:
     BRA SHOOT_BULLET
     RTS
 
-* UPDATE_ENEMY:
-*     CMP.B #0, ENEMY_MOVING_R
-*     BEQ MOVE_ENEMY_LEFT
-*     BRA MOVE_ENEMY_RIGHT
-*     RTS
+UPDATE_ENEMYS:
+   BSR ENEMY_MOVE_DOWN
+   BSR CHECK_ENEMY_RESETS
+    RTS
+ENEMY_MOVE_DOWN:
 
+    MOVE.L ENEMY_2_Y, D1
+    ADD.L #ENEMY_SPEED, ENEMY_1_Y
+    ADD.L #ENEMY_SPEED, ENEMY_2_Y
+    ADD.L #ENEMY_SPEED, ENEMY_3_Y
+    ADD.L #ENEMY_SPEED, ENEMY_4_Y
+    ADD.L #ENEMY_SPEED, ENEMY_5_Y
+    RTS
 
-* MOVE_ENEMY_RIGHT:
-*     ADD.L #1, ENEMY_X
-*     RTS
+CHECK_ENEMY_RESETS
+    BSR CHECK_ENEMY_RESET_1
+    BSR CHECK_ENEMY_RESET_2
+    BSR CHECK_ENEMY_RESET_3
+    BSR CHECK_ENEMY_RESET_4
+    BSR CHECK_ENEMY_RESET_5
+    RTS
+CHECK_ENEMY_RESET_1:
+    CLR.L D1
+    CLR.L D2
 
-* MOVE_ENEMY_LEFT:
-*     SUB.L #1, ENEMY_X
-*     RTS
+    MOVE.L #480, D1      ; point in which on screen respawn will happen 
+    MOVE.L ENEMY_1_Y, D2
     
+    CMP.L D1, D2
+    BGE   RESET_ENEMY_1
+    RTS
+    
+RESET_ENEMY_1:
+    MOVE.L #0, ENEMY_1_Y
+    RTS
+
+CHECK_ENEMY_RESET_2:
+    CLR.L D1
+    CLR.L D2
+
+    MOVE.L #480, D1      ; point in which on screen respawn will happen 
+    MOVE.L ENEMY_2_Y, D2
+    
+    CMP.L D1, D2
+    BGE   RESET_ENEMY_2
+    RTS
+    
+RESET_ENEMY_2:
+    MOVE.L #0, ENEMY_2_Y
+    RTS
+
+CHECK_ENEMY_RESET_3:
+    CLR.L D1
+    CLR.L D2
+
+    MOVE.L #480, D1      ; point in which on screen respawn will happen 
+    MOVE.L ENEMY_3_Y, D2
+    
+    CMP.L D1, D2
+    BGE   RESET_ENEMY_3
+    RTS
+    
+RESET_ENEMY_3:
+    MOVE.L #0, ENEMY_3_Y
+    RTS
+
+CHECK_ENEMY_RESET_4:
+    CLR.L D1
+    CLR.L D2
+
+    MOVE.L #480, D1      ; point in which on screen respawn will happen 
+    MOVE.L ENEMY_4_Y, D2
+    
+    CMP.L D1, D2
+    BGE   RESET_ENEMY_4
+    RTS
+    
+RESET_ENEMY_4:
+    MOVE.L #0, ENEMY_4_Y
+    RTS
+
+CHECK_ENEMY_RESET_5:
+    CLR.L D1
+    CLR.L D2
+
+    MOVE.L #480, D1      ; point in which on screen respawn will happen 
+    MOVE.L ENEMY_5_Y, D2
+    
+    CMP.L D1, D2
+    BGE   RESET_ENEMY_5
+    RTS
+    
+RESET_ENEMY_5:
+    MOVE.L #0, ENEMY_5_Y
+    RTS
 
 CHECK_FOR_BULLET_RESPAWN:
     CMP.L #0, BULLET_Y
@@ -249,7 +346,7 @@ BULLET_TRACK_PLAYER:
     RTS
 
 SHOOT_BULLET:
-    SUB.L #10, BULLET_Y
+    SUB.L #50, BULLET_Y
     RTS
 *-----------------------------------------------------------
 * Subroutine    : Input
@@ -723,8 +820,50 @@ DRAW_ENEMY_2:
     MOVE.B  #87,        D0          ; Draw Enemy
     TRAP    #15                     ; Trap (Perform action)
 
-    RTS
+DRAW_ENEMY_3:
+    MOVE.L  ENEMY_3_X,      D1       ; X   
+    MOVE.L  ENEMY_3_Y,      D2       ; Y
 
+    * Width and Height *
+    MOVE.L  ENEMY_3_X,      D3
+    ADD.L   #ENMY_W_INIT,   D3      ; Width
+    MOVE.L  ENEMY_3_Y,      D4 
+    ADD.L   #ENMY_H_INIT,   D4      ; Height
+    
+    ; Draw Enemy    
+    MOVE.B  #87,        D0          ; Draw Enemy
+    TRAP    #15                     ; Trap (Perform action)
+
+
+DRAW_ENEMY_4:
+    MOVE.L  ENEMY_4_X,      D1       ; X   
+    MOVE.L  ENEMY_4_Y,      D2       ; Y
+
+    * Width and Height *
+    MOVE.L  ENEMY_4_X,      D3
+    ADD.L   #ENMY_W_INIT,   D3      ; Width
+    MOVE.L  ENEMY_4_Y,      D4 
+    ADD.L   #ENMY_H_INIT,   D4      ; Height
+    
+    ; Draw Enemy    
+    MOVE.B  #87,        D0          ; Draw Enemy
+    TRAP    #15                     ; Trap (Perform action)
+
+DRAW_ENEMY_5:
+    MOVE.L  ENEMY_5_X,      D1       ; X   
+    MOVE.L  ENEMY_5_Y,      D2       ; Y
+
+    * Width and Height *
+    MOVE.L  ENEMY_5_X,      D3
+    ADD.L   #ENMY_W_INIT,   D3      ; Width
+    MOVE.L  ENEMY_5_Y,      D4 
+    ADD.L   #ENMY_H_INIT,   D4      ; Height
+    
+    ; Draw Enemy    
+    MOVE.B  #87,        D0          ; Draw Enemy
+    TRAP    #15                     ; Trap (Perform action)
+
+    RTS
 DRAW_ENEMY_LOOP:
     * X and Y *
     MOVE.L  (A0),    D1       ; X   
@@ -785,6 +924,10 @@ CHECK_COLLISIONS:
 
     BSR CHECK_BULLET_Y_GREATER_ENEMY_1_Y
     BSR CHECK_BULLET_Y_GREATER_ENEMY_2_Y
+    BSR CHECK_BULLET_Y_GREATER_ENEMY_3_Y
+    BSR CHECK_BULLET_Y_GREATER_ENEMY_4_Y
+    BSR CHECK_BULLET_Y_GREATER_ENEMY_5_Y
+
 
     RTS
 
@@ -819,7 +962,11 @@ CHECK_BULLET_X_GREATER_ENEMY_1_X:
 COLLISION_1:
     BSR     PLAY_OPPS               ; Play Opps Wav
     MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
-    SUB.L  #10, ENEMY_1_X
+
+    BSR RESET_ENEMY_1
+    BSR RESPAWN_BULLET
+    BSR BULLET_TRACK_PLAYER
+
     BRA     COLLISION_CHECK_DONE
 
 CHECK_BULLET_Y_GREATER_ENEMY_2_Y:    
@@ -854,8 +1001,125 @@ CHECK_BULLET_X_GREATER_ENEMY_2_X:
 COLLISION_2:
     BSR     PLAY_OPPS               ; Play Opps Wav
     MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
-    SUB.L  #10, ENEMY_2_X
+    BSR RESET_ENEMY_2
+    BSR RESPAWN_BULLET
+    BSR BULLET_TRACK_PLAYER
     BRA     COLLISION_CHECK_DONE
+
+CHECK_BULLET_Y_GREATER_ENEMY_3_Y:    
+    CLR.L   D1
+    CLR.L   D2
+     MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
+     MOVE.L  ENEMY_3_y,    D2          ; Move Enemy Y to D2
+
+     CMP.L   D1,         D2          ; Do they Overlap ?
+     BGE     CHECK_BULLET_X_LESSER_3_WIDTH  ; Less than or Equal
+     BRA     COLLISION_CHECK_DONE    ; If not no collision 
+
+CHECK_BULLET_X_LESSER_3_WIDTH:     ; Check player is not  
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L   Bullet_X,      D1          ; Move Player Width to D1
+    MOVE.L  ENEMY_3_X,           D2          ; Move Enemy X to D2
+    ADD.L   ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D1,             D2          ; Do they OverLap ?
+    BLE     CHECK_BULLET_X_GREATER_ENEMY_3_X ; Less than or Equal
+    BRA     COLLISION_CHECK_DONE    ; If not no collision   
+
+CHECK_BULLET_X_GREATER_ENEMY_3_X:
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L  Bullet_X,   D1          ; Move bullet X to D1
+    MOVE.L  ENEMY_3_X,    D2          ; Move Enemy X to D2
+    CMP.L   D1,         D2          ;   Do the Overlap ?
+    BGE     COLLISION_3 ; greater than or equal ?
+    BRA     COLLISION_CHECK_DONE    ; If not no collision
+
+COLLISION_3:
+    BSR     PLAY_OPPS               ; Play Opps Wav
+    MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
+    BSR RESET_ENEMY_3
+    BSR RESPAWN_BULLET
+    BSR BULLET_TRACK_PLAYER
+    BRA     COLLISION_CHECK_DONE
+
+CHECK_BULLET_Y_GREATER_ENEMY_4_Y:    
+    CLR.L   D1
+    CLR.L   D2
+     MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
+     MOVE.L  ENEMY_4_y,    D2          ; Move Enemy Y to D2
+
+     CMP.L   D1,         D2          ; Do they Overlap ?
+     BGE     CHECK_BULLET_X_LESSER_4_WIDTH  ; Less than or Equal
+     BRA     COLLISION_CHECK_DONE    ; If not no collision 
+
+CHECK_BULLET_X_LESSER_4_WIDTH:     ; Check player is not  
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L   Bullet_X,      D1          ; Move Player Width to D1
+    MOVE.L  ENEMY_4_X,           D2          ; Move Enemy X to D2
+    ADD.L   ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D1,             D2          ; Do they OverLap ?
+    BLE     CHECK_BULLET_X_GREATER_ENEMY_4_X ; Less than or Equal
+    BRA     COLLISION_CHECK_DONE    ; If not no collision   
+
+CHECK_BULLET_X_GREATER_ENEMY_4_X:
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L  Bullet_X,   D1          ; Move bullet X to D1
+    MOVE.L  ENEMY_4_X,    D2          ; Move Enemy X to D2
+    CMP.L   D1,         D2          ;   Do the Overlap ?
+    BGE     COLLISION_4 ; greater than or equal ?
+    BRA     COLLISION_CHECK_DONE    ; If not no collision
+
+COLLISION_4:
+    BSR     PLAY_OPPS               ; Play Opps Wav
+    MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
+    BSR RESET_ENEMY_4
+    BSR RESPAWN_BULLET
+    BSR BULLET_TRACK_PLAYER
+    BRA     COLLISION_CHECK_DONE
+
+CHECK_BULLET_Y_GREATER_ENEMY_5_Y:    
+    CLR.L   D1
+    CLR.L   D2
+     MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
+     MOVE.L  ENEMY_5_y,    D2          ; Move Enemy Y to D2
+
+     CMP.L   D1,         D2          ; Do they Overlap ?
+     BGE     CHECK_BULLET_X_LESSER_5_WIDTH  ; Less than or Equal
+     BRA     COLLISION_CHECK_DONE    ; If not no collision 
+
+CHECK_BULLET_X_LESSER_5_WIDTH:     ; Check player is not  
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L   Bullet_X,      D1          ; Move Player Width to D1
+    MOVE.L  ENEMY_5_X,           D2          ; Move Enemy X to D2
+    ADD.L   ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D1,             D2          ; Do they OverLap ?
+    BLE     CHECK_BULLET_X_GREATER_ENEMY_5_X ; Less than or Equal
+    BRA     COLLISION_CHECK_DONE    ; If not no collision   
+
+CHECK_BULLET_X_GREATER_ENEMY_5_X:
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L  Bullet_X,   D1          ; Move bullet X to D1
+    MOVE.L  ENEMY_5_X,    D2          ; Move Enemy X to D2
+    CMP.L   D1,         D2          ;   Do the Overlap ?
+    BGE     COLLISION_5 ; greater than or equal ?
+    BRA     COLLISION_CHECK_DONE    ; If not no collision
+
+COLLISION_5:
+    BSR     PLAY_OPPS               ; Play Opps Wav
+    MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
+    BSR RESET_ENEMY_5
+    BSR RESPAWN_BULLET
+    BSR BULLET_TRACK_PLAYER
+    BRA     COLLISION_CHECK_DONE
+
+
+
+
 COLLISION_CHECK_DONE:               ; No Collision Update points
 
 
@@ -963,9 +1227,21 @@ ENEMY_1_X         DS.L    01 ; Reserve Space for Enemy X Position
 ENEMY_1_Y         DS.L    01  ; Reserve Space for Enemy Y Position
 
 ENEMY_2_X         DS.L    01
-ENEMY_2_Y         DS.l    01
-ENEMY_MOVING_R        DS.L    01  ; RES SPACE FOR MOVING RIGHT BOOLEAN
+ENEMY_2_Y         DS.L    01
 
+ENEMY_3_X         DS.L    01 ; Reserve Space for Enemy X Position
+ENEMY_3_Y         DS.L    01  ; Reserve Space for Enemy Y Position
+
+ENEMY_4_X         DS.L    01
+ENEMY_4_Y         DS.l    01
+
+ENEMY_5_X         DS.L    01 ; Reserve Space for Enemy X Position
+ENEMY_5_Y         DS.L    01  ; Reserve Space for Enemy Y Position
+
+
+ENEMY_MOVING_R    DS.L    01  ; RES SPACE FOR MOVING RIGHT BOOLEAN
+
+ENEMY_SPEED_MODIFIER DS.L 01
 BULLET_X        DS.L    01   ; space for bullet x pos    
 BULLET_Y        DS.L    01   ; space for bullet y pos
 
