@@ -437,6 +437,7 @@ DRAW:
 	MOVE.W	#$FF00,     D1          ; Clear contents
 	TRAP    #15                     ; Trap (Perform action)
 
+    BSR     DRAW_BASE
     BSR     DRAW_PLYR_DATA          ; Draw Draw Score, HUD, Player X and Y
     BSR     DRAW_PLAYER             ; Draw Player
     BSR     DRAW_ENEMYS             ; Draw Enemy
@@ -864,24 +865,7 @@ DRAW_ENEMY_5:
     TRAP    #15                     ; Trap (Perform action)
 
     RTS
-DRAW_ENEMY_LOOP:
-    * X and Y *
-    MOVE.L  (A0),    D1       ; X   
-    MOVE.L  (A1),    D2       ; Y
 
-    * Width and Height *
-    MOVE.L  (A0)+,    D3
-    ADD.L   #ENMY_W_INIT,   D3      ; Width
-    MOVE.L  (A1)+,    D4 
-    ADD.L   #ENMY_H_INIT,   D4      ; Height
-    
-    ; Draw Enemy    
-    MOVE.B  #87,        D0          ; Draw Enemy
-    TRAP    #15                     ; Trap (Perform action)
-
-    DBRA D5, DRAW_ENEMY_LOOP
-
-    RTS  
 
 *-----------------------------------------------------------
 * Subroutine    : Draw bullet
@@ -907,8 +891,25 @@ DRAW_BULLET:
     RTS                             ; Return to subroutine
 
 
+DRAW_BASE:
+    MOVE.L #PURPLE,     D1
+    MOVE.B  #80,        D0          
+    TRAP    #15
 
+    MOVE.L #PURPLE,     D1
+    MOVE.B  #81,        D0          
+    TRAP    #15
 
+    MOVE.L  BULLET_X,    D1          ; X
+    MOVE.L  BULLET_Y,    D2          ; Y
+    MOVE.L  BULLET_X,    D3
+    ADD.L   #100,   D3      ; Width
+    MOVE.L  BULLET_Y,    D4 
+    ADD.L   #BULLET_H,   D4      ; Height
+
+    MOVE.B  #85,        D0          ; Draw Enemy
+    TRAP    #15                     ; Trap (Perform action)
+    RTS 
 
 *-----------------------------------------------------------
 * Subroutine    : Collision Check
@@ -1189,6 +1190,7 @@ EXIT_MSG        DC.B    'Exiting....', 0    ; Exit Message
 WHITE           EQU     $00FFFFFF
 RED             EQU     $000000FF
 AQUA            EQU     $00FFFF00
+PURPLE          EQU     $00800080
 
 
 *-----------------------------------------------------------
