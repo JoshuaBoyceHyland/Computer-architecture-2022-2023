@@ -1167,7 +1167,7 @@ EXIT:
 * dc.b is text
 * ds.b is number 
 * becarefull how you store l/b, long/byte
-SCORE_MSG       DC.B    'Score : ', 0       ; Score Message
+SCORE_MSG       DC.B    'LIVES : ', 0       ; Score Message
 KEYCODE_MSG     DC.B    'KeyCode : ', 0     ; Keycode Message
 JUMP_MSG        DC.B    'Jump....', 0       ; Jump Message
 
