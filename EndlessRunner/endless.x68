@@ -97,7 +97,7 @@ INITIALISE:
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
     * MOVE.W  SCREEN_H,   D1          ; Place Screen width in D1
     * SUB.L    #50,        D1          ; divide by 2 for center on Y Axis
-    MOVE.L  #450,         PLAYER_Y    ; Players Y Position
+    MOVE.L  #425,         PLAYER_Y    ; Players Y Position
 
     ; Initialise Player Score
     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
@@ -129,7 +129,9 @@ INITIALISE:
     MOVE.B D1, BEEN_SHOT
     MOVE.B D1, ENEMY_MOVING_R ; makes false so is moving left to start
 
-
+    CLR.L D1
+    MOVE.L #50, D1
+    MOVE.L D1, BASE_LIVES 
     ; Enable the screen back buffer(see easy 68k help)
 	MOVE.B  #TC_DBL_BUF,D0          ; 92 Enables Double Buffer
     MOVE.B  #17,        D1          ; Combine Tasks
@@ -258,9 +260,11 @@ CHECK_ENEMY_RESET_1:
     MOVE.L ENEMY_1_Y, D2
     
     CMP.L D1, D2
-    BGE   RESET_ENEMY_1
+    BGE   ENEMY_1_REACHED_BASE
     RTS
-    
+
+ENEMY_1_REACHED_BASE:
+    SUB.L #01, BASE_LIVES
 RESET_ENEMY_1:
     MOVE.L #0, ENEMY_1_Y
     RTS
@@ -273,9 +277,11 @@ CHECK_ENEMY_RESET_2:
     MOVE.L ENEMY_2_Y, D2
     
     CMP.L D1, D2
-    BGE   RESET_ENEMY_2
+    BGE   ENEMY_2_REACHED_BASE
     RTS
-    
+
+ENEMY_2_REACHED_BASE:
+    SUB.L #01, BASE_LIVES
 RESET_ENEMY_2:
     MOVE.L #0, ENEMY_2_Y
     RTS
@@ -288,9 +294,11 @@ CHECK_ENEMY_RESET_3:
     MOVE.L ENEMY_3_Y, D2
     
     CMP.L D1, D2
-    BGE   RESET_ENEMY_3
+    BGE   ENEMY_3_REACHED_BASE
     RTS
     
+ENEMY_3_REACHED_BASE:
+    SUB.L #01, BASE_LIVES
 RESET_ENEMY_3:
     MOVE.L #0, ENEMY_3_Y
     RTS
@@ -303,9 +311,11 @@ CHECK_ENEMY_RESET_4:
     MOVE.L ENEMY_4_Y, D2
     
     CMP.L D1, D2
-    BGE   RESET_ENEMY_4
+    BGE   ENEMY_4_REACHED_BASE
     RTS
-    
+
+ENEMY_4_REACHED_BASE:
+    SUB.L #01, BASE_LIVES
 RESET_ENEMY_4:
     MOVE.L #0, ENEMY_4_Y
     RTS
@@ -318,9 +328,11 @@ CHECK_ENEMY_RESET_5:
     MOVE.L ENEMY_5_Y, D2
     
     CMP.L D1, D2
-    BGE   RESET_ENEMY_5
+    BGE   ENEMY_5_REACHED_BASE
     RTS
-    
+
+ENEMY_5_REACHED_BASE:
+    SUB.L #01, BASE_LIVES
 RESET_ENEMY_5:
     MOVE.L #0, ENEMY_5_Y
     RTS
@@ -432,11 +444,13 @@ DRAW:
 	MOVE.W	#$FF00,     D1          ; Clear contents
 	TRAP    #15                     ; Trap (Perform action)
 
-    BSR     DRAW_BASE
-    BSR     DRAW_PLYR_DATA          ; Draw Draw Score, HUD, Player X and Y
+    
+    
     BSR     DRAW_PLAYER             ; Draw Player
     BSR     DRAW_ENEMYS             ; Draw Enemy
     BSR     DRAW_BULLET             ; draw bullet
+    BSR     DRAW_BASE
+    BSR     DRAW_PLYR_DATA          ; Draw Draw Score, HUD, Player X and Y
     RTS                             ; Return to subroutine
 
 *-----------------------------------------------------------
@@ -546,7 +560,7 @@ DRAW_PLYR_DATA:
     MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
     MOVE.W  #$2001,     D1          ; Col 20, Row 1
     TRAP    #15                     ; Trap (Perform action)
-    LEA     KEYCODE_MSG, A1         ; Keycode
+    LEA     BASE_LIVES_MSG, A1         ; Keycode
     MOVE    #13,        D0          ; No Line feed
     TRAP    #15                     ; Trap (Perform action)
 
@@ -554,7 +568,7 @@ DRAW_PLYR_DATA:
     MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
     MOVE.W  #$3001,     D1          ; Col 30, Row 1
     TRAP    #15                     ; Trap (Perform action)    
-    MOVE.L  CURRENT_KEY,D1          ; Move Key Pressed to D1
+    MOVE.L  BASE_LIVES ,D1          ; Move Key Pressed to D1
     MOVE.B  #03,        D0          ; Display the contents of D1
     TRAP    #15                     ; Trap (Perform action)
 
@@ -771,11 +785,52 @@ DRAW_PLAYER:
     TRAP    #15                     ; Trap (Perform action)
     RTS                             ; Return to subroutine
 
+
+*-----------------------------------------------------------
+* Subroutine    : Draw base
+* Description   : Draw base Square
+*-----------------------------------------------------------
+DRAW_BASE:
+    CLR.L D0
+    CLR.L D1
+    CLR.L D2
+    CLR.L D3
+    CLR.L D4
+
+    MOVE.L #PURPLE,     D1
+    MOVE.B  #80,        D0          
+    TRAP    #15
+
+    MOVE.L #PURPLE,     D1
+    MOVE.B  #81,        D0          
+    TRAP    #15
+
+    MOVE.L  #WHITE,     D1          ; Set out line color
+    MOVE.B  #80,        D0          ; Task for Background Color
+    TRAP    #15                     ; Trap (Perform action)
+
+    ; Set X, Y, Width and Height
+    MOVE.L  #0,   D1          ; X
+    SUB.L   #1, D1     
+    MOVE.L  #500,   D2          ; Y
+    MOVE.L  #0,   D3
+    ADD.L   #SCREEN_W,   D3      ; Width
+
+    ADD.L   #450,   D4      ; Height
+    
+    ; Draw Player
+    MOVE.B  #87,        D0          ; Draw Player
+    TRAP    #15                     ; Trap (Perform action)
+    RTS                             ; Return to subroutine
+
 *-----------------------------------------------------------
 * Subroutine    : Draw Enemy
 * Description   : Draw Enemy Square
 *-----------------------------------------------------------
 DRAW_ENEMYS:
+    CLR.L D1
+    CLR.L D2
+    CLR.L D3
     ; Set Pixel Colors
     MOVE.L  #RED,       D1          ; Set Background color
     MOVE.B  #80,        D0          ; Task for Background Color
@@ -886,24 +941,24 @@ DRAW_BULLET:
     RTS                             ; Return to subroutine
 
 
-DRAW_BASE:
-    MOVE.L #PURPLE,     D1
-    MOVE.B  #80,        D0          
-    TRAP    #15
+* DRAW_BASE:
+*     MOVE.L #PURPLE,     D1
+*     MOVE.B  #80,        D0          
+*     TRAP    #15
 
-    MOVE.L #PURPLE,     D1
-    MOVE.B  #81,        D0          
-    TRAP    #15
+*     MOVE.L #PURPLE,     D1
+*     MOVE.B  #81,        D0          
+*     TRAP    #15
 
-    MOVE.L  BULLET_X,    D1          ; X
-    MOVE.L  BULLET_Y,    D2          ; Y
-    MOVE.L  BULLET_X,    D3
-    ADD.L   #100,   D3      ; Width
-    MOVE.L  BULLET_Y,    D4 
-    ADD.L   #BULLET_H,   D4      ; Height
+*     MOVE.L  BULLET_X,    D1          ; X
+*     MOVE.L  BULLET_Y,    D2          ; Y
+*     MOVE.L  BULLET_X,    D3
+*     ADD.L   #100,   D3      ; Width
+*     MOVE.L  BULLET_Y,    D4 
+*     ADD.L   #BULLET_H,   D4      ; Height
 
-    MOVE.B  #85,        D0          ; Draw Enemy
-    TRAP    #15                     ; Trap (Perform action)
+*     MOVE.B  #85,        D0          ; Draw Enemy
+*     TRAP    #15                     ; Trap (Perform action)
     RTS 
 
 *-----------------------------------------------------------
@@ -960,10 +1015,10 @@ CHECK_BULLET_X_GREATER_ENEMY_1_X:
 
 COLLISION_1:
     BSR     PLAY_OPPS               ; Play Opps Wav
-    MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
-
+    ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
+    BSR RESPAWN_BULLET
     BSR RESET_ENEMY_1
-
+    
     BRA     COLLISION_CHECK_DONE
 
 CHECK_BULLET_Y_GREATER_ENEMY_2_Y:    
@@ -999,10 +1054,11 @@ CHECK_BULLET_X_GREATER_ENEMY_2_X:
 
 COLLISION_2:
     BSR     PLAY_OPPS               ; Play Opps Wav
-    MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
+    ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
 
+    BSR RESPAWN_BULLET
     BSR RESET_ENEMY_2
-
+    
     BRA     COLLISION_CHECK_DONE
 
 CHECK_BULLET_Y_GREATER_ENEMY_3_Y:    
@@ -1037,10 +1093,11 @@ CHECK_BULLET_X_GREATER_ENEMY_3_X:
 
 COLLISION_3:
     BSR     PLAY_OPPS               ; Play Opps Wav
-    MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
+    ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
 
+    BSR RESPAWN_BULLET
     BSR RESET_ENEMY_3
-
+    
     BRA     COLLISION_CHECK_DONE
 
 CHECK_BULLET_Y_GREATER_ENEMY_4_Y:    
@@ -1074,10 +1131,10 @@ CHECK_BULLET_X_GREATER_ENEMY_4_X:
 
 COLLISION_4:
     BSR     PLAY_OPPS               ; Play Opps Wav
-    MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
-
+    ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
+    BSR RESPAWN_BULLET
     BSR RESET_ENEMY_4
-
+    
     BRA     COLLISION_CHECK_DONE
 
 CHECK_BULLET_Y_GREATER_ENEMY_5_Y:    
@@ -1111,22 +1168,16 @@ CHECK_BULLET_X_GREATER_ENEMY_5_X:
 
 COLLISION_5:
     BSR     PLAY_OPPS               ; Play Opps Wav
-    MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
-
+    ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
+    BSR RESPAWN_BULLET
     BSR RESET_ENEMY_5
-
+    
     BRA     COLLISION_CHECK_DONE
 
 
 
 
 COLLISION_CHECK_DONE:               ; No Collision Update points
-
-
-    ADD.L   #POINTS,    D1          ; Move points upgrade to D1
-    ADD.L   PLAYER_SCORE,D1         ; Add to current player score
-    MOVE.L  D1, PLAYER_SCORE        ; Update player score in memory
-
     RTS                             ; Return to subroutine
 
 
@@ -1166,9 +1217,10 @@ EXIT:
 * dc.b is text
 * ds.b is number 
 * becarefull how you store l/b, long/byte
-SCORE_MSG       DC.B    'LIVES : ', 0       ; Score Message
-KEYCODE_MSG     DC.B    'KeyCode : ', 0     ; Keycode Message
-JUMP_MSG        DC.B    'Jump....', 0       ; Jump Message
+
+SCORE_MSG           DC.B     'Score : ', 0  
+BASE_LIVES_MSG      DC.B     'Base lives : ', 0     ; Keycode Message
+JUMP_MSG            DC.B    'Jump....', 0       ; Jump Message
 
 IDLE_MSG        DC.B    'Idle....', 0       ; Idle Message
 UPDATE_MSG      DC.B    'Update....', 0     ; Update Message
@@ -1207,11 +1259,10 @@ SCREEN_H        DS.W    01  ; Reserve Space for Screen Height
 *-----------------------------------------------------------
 BEEN_SHOT       DS.L    01      ; reserve of space
 *-----------------------------------------------------------
-* Section       : Keyboard Input
-* Description   : Used for storing Keypresses
+* Section       : Base lives
+* Description   : Used for storing bases current lives
 *-----------------------------------------------------------
-CURRENT_KEY     DS.L    01  ; Reserve Space for Current Key Pressed
-
+BASE_LIVES      DS.L    01  ; Reserve Space for Current Key Pressed
 *-----------------------------------------------------------
 * Section       : Character Positions
 * Description   : Player and Enemy Position Memory Locations
