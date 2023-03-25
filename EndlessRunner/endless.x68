@@ -1,9 +1,4 @@
-*-----------------------------------------------------------
-* Title      : Endless Runner Starter Kit
-* Written by : Philip Bourke
-* Date       : 25/02/2023
-* Description: Endless Runner Project Starter Kit
-*-----------------------------------------------------------
+
     ORG    $1000
 START:                  ; first instruction of program
 * BASICALLY CONSTANTS
@@ -41,7 +36,7 @@ RUN_INDEX   EQU         00          ; Player Run Sound Index
 JMP_INDEX   EQU         01          ; Player Jump Sound Index  
 OPPS_INDEX  EQU         02          ; Player Opps Sound Index
 
-ENMY_W_INIT EQU         25          ; Enemy initial Width
+ENMY_W_INIT EQU         30          ; Enemy initial Width
 ENMY_H_INIT EQU         10          ; Enemy initial Height
 NUM_OF_ENEMYS    EQU    02          ; number of enemys 
 
@@ -914,12 +909,12 @@ DRAW_BASE:
 *-----------------------------------------------------------
 * Subroutine    : Collision Check
 * Description   : Axis-Aligned Bounding Box Collision Detection
-* Algorithm checks for overlap on the 4 sides of the Player and 
+* Algorithm checks for overlap on the 2 sides of the Player and 
+* Not checking top of enemy as this gives less time to detect collision, it kept missing collision somtimes
 * Enemy rectangles
-* PLAYER_X <= ENEMY_X + ENEMY_W &&
-* PLAYER_X + PLAYER_W >= ENEMY_X &&
-* PLAYER_Y <= ENEMY_Y + ENEMY_H &&
-* PLAYER_H + PLAYER_Y >= ENEMY_Y
+* BULLET_X <= ENEMY_X + ENEMY_W &&
+* BULLET_X>= ENEMY_X &&
+* BULLET< = ENEMY_Y
 *-----------------------------------------------------------
 CHECK_COLLISIONS:
 
@@ -939,18 +934,10 @@ CHECK_BULLET_Y_GREATER_ENEMY_1_Y:
      MOVE.L  ENEMY_1_y,    D2          ; Move Enemy Y to D2
 
      CMP.L   D1,         D2          ; Do they Overlap ?
-     BGE     CHECK_BULLET_Y_LESSER_1_HEIGHT  ; Less than or Equal
+     BGE     CHECK_BULLET_X_LESSER_1_WIDTH  ; Less than or Equal
      BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
-CHECK_BULLET_Y_LESSER_1_HEIGHT:    
-    CLR.L   D1
-    CLR.L   D2
-    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
-    MOVE.L  ENEMY_1_y,    D2          ; Move Enemy Y to D2
-    SUB.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
-    CMP.L   D1,         D2          ; Do they Overlap ?
-    BLE     CHECK_BULLET_X_LESSER_1_WIDTH  ; Less than or Equal
-    BRA     COLLISION_CHECK_DONE    ; If not no collision 
+
 
 CHECK_BULLET_X_LESSER_1_WIDTH:     ; Check player is not  
     CLR.L   D1
@@ -986,18 +973,10 @@ CHECK_BULLET_Y_GREATER_ENEMY_2_Y:
      MOVE.L  ENEMY_2_y,    D2          ; Move Enemy Y to D2
 
      CMP.L   D1,         D2          ; Do they Overlap ?
-     BGE     CHECK_BULLET_Y_LESSER_2_HEIGHT  ; Less than or Equal
+     BGE     CHECK_BULLET_X_LESSER_2_WIDTH  ; Less than or Equal
      BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
-CHECK_BULLET_Y_LESSER_2_HEIGHT:    
-    CLR.L   D1
-    CLR.L   D2
-    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
-    MOVE.L  ENEMY_2_y,    D2          ; Move Enemy Y to D2
-    SUB.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
-    CMP.L   D1,         D2          ; Do they Overlap ?
-    BLE     CHECK_BULLET_X_LESSER_2_WIDTH  ; Less than or Equal
-    BRA     COLLISION_CHECK_DONE    ; If not no collision 
+
 
 CHECK_BULLET_X_LESSER_2_WIDTH:     ; Check player is not  
     CLR.L   D1
@@ -1033,18 +1012,9 @@ CHECK_BULLET_Y_GREATER_ENEMY_3_Y:
      MOVE.L  ENEMY_3_y,    D2          ; Move Enemy Y to D2
 
      CMP.L   D1,         D2          ; Do they Overlap ?
-     BGE     CHECK_BULLET_Y_LESSER_3_HEIGHT  ; Less than or Equal
+     BGE     CHECK_BULLET_X_LESSER_3_WIDTH  ; Less than or Equal
      BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
-CHECK_BULLET_Y_LESSER_3_HEIGHT:    
-    CLR.L   D1
-    CLR.L   D2
-    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
-    MOVE.L  ENEMY_3_y,    D2          ; Move Enemy Y to D2
-    SUB.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
-    CMP.L   D1,         D2          ; Do they Overlap ?
-    BLE     CHECK_BULLET_X_LESSER_3_WIDTH  ; Less than or Equal
-    BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
 CHECK_BULLET_X_LESSER_3_WIDTH:     ; Check player is not  
     CLR.L   D1
@@ -1080,18 +1050,8 @@ CHECK_BULLET_Y_GREATER_ENEMY_4_Y:
      MOVE.L  ENEMY_4_y,    D2          ; Move Enemy Y to D2
 
      CMP.L   D1,         D2          ; Do they Overlap ?
-     BGE     CHECK_BULLET_Y_LESSER_4_HEIGHT  ; Less than or Equal
+     BGE     CHECK_BULLET_X_LESSER_4_WIDTH  ; Less than or Equal
      BRA     COLLISION_CHECK_DONE    ; If not no collision 
-
-CHECK_BULLET_Y_LESSER_4_HEIGHT:    
-    CLR.L   D1
-    CLR.L   D2
-    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
-    MOVE.L  ENEMY_4_y,    D2          ; Move Enemy Y to D2
-    SUB.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
-    CMP.L   D1,         D2          ; Do they Overlap ?
-    BLE     CHECK_BULLET_X_LESSER_4_WIDTH  ; Less than or Equal
-    BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
 CHECK_BULLET_X_LESSER_4_WIDTH:     ; Check player is not  
     CLR.L   D1
@@ -1127,18 +1087,8 @@ CHECK_BULLET_Y_GREATER_ENEMY_5_Y:
      MOVE.L  ENEMY_5_y,    D2          ; Move Enemy Y to D2
 
      CMP.L   D1,         D2          ; Do they Overlap ?
-     BGE     CHECK_BULLET_Y_LESSER_5_HEIGHT  ; Less than or Equal
+     BGE     CHECK_BULLET_X_LESSER_5_WIDTH  ; Less than or Equal
      BRA     COLLISION_CHECK_DONE    ; If not no collision 
-
-CHECK_BULLET_Y_LESSER_5_HEIGHT:    
-    CLR.L   D1
-    CLR.L   D2
-    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
-    MOVE.L  ENEMY_5_y,    D2          ; Move Enemy Y to D2
-    SUB.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
-    CMP.L   D1,         D2          ; Do they Overlap ?
-    BLE     CHECK_BULLET_X_LESSER_5_WIDTH  ; Less than or Equal
-    BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
 CHECK_BULLET_X_LESSER_5_WIDTH:     ; Check player is not  
     CLR.L   D1
