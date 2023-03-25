@@ -212,16 +212,26 @@ GAMELOOP:
     ;BSR     IS_PLAYER_ON_GND        ; Check if player is on ground
     BSR     CHECK_COLLISIONS        ; Check for Collisions
     BSR     DRAW                    ; Draw the Scene
+    BSR     CHECK_FOR_EXIT
     
 
-DELTA_t:
+GAME_DELTA_t:
     MOVE.B #8, D0                   ;CURRENT TIME 
     TRAP #15  
     SUB.L DELTA_TIME, D1            ; TAKING AWAY DELTATIME FROM CURRENT TO CHECK REMAINDER, 
     
     CMP.L #4, D1
-    BMI.S DELTA_t                     ; if deltam time is lesser or equal to 17; branch lesser or equal to 
+    BMI.S GAME_DELTA_t                     ; if deltam time is lesser or equal to 17; branch lesser or equal to 
     BRA GAMELOOP
+
+
+
+*checks if base lives has is higher than -
+CHECK_FOR_EXIT:
+    CMP.L #0, BASE_LIVES
+    BLE END_SCREEN_LOOP
+    RTS
+
 
 
 UPDATE_BULLET:
@@ -347,14 +357,16 @@ RESPAWN_BULLET:
     RTS
     
 
+SHOOT_BULLET:
+    SUB.L #50, BULLET_Y
+    RTS
+
 BULLET_TRACK_PLAYER:
     MOVE.L PLAYER_X, BULLET_X
     MOVE.L PLAYER_Y, BULLET_Y
     RTS
 
-SHOOT_BULLET:
-    SUB.L #50, BULLET_Y
-    RTS
+
 *-----------------------------------------------------------
 * Subroutine    : Input
 * Description   : Process Keyboard Input
@@ -402,33 +414,8 @@ UPDATE:
     ADD.L   PLAYER_Y,   D1          ; Add Velocity to Player
     MOVE.L  D1,         PLAYER_Y    ; Update Players Y Position 
 
-    ; Move the Enemy
-    ;CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    ;CLR.L   D1                      ; Clear the contents of D0
-   ; MOVE.L  ENEMY_X,    D1          ; Move the Enemy X Position to D0
-    ;CMP.L   #00,        D1
-    ;BLE     RESET_ENEMY_POSITION    ; Reset Enemy if off Screen
-   ;BRA     MOVE_ENEMY              ; Move the Enemy
-
     RTS                             ; Return to subroutine  
 
-*-----------------------------------------------------------
-* Subroutine    : Move Enemy
-* Description   : Move Enemy Right to Left
-*-----------------------------------------------------------
-* MOVE_ENEMY:
-*     SUB.L   #01,        ENEMY_X     ; Move enemy by X Value
-*     RTS
-
-*-----------------------------------------------------------
-* Subroutine    : Reset Enemy
-* Description   : Reset Enemy if to passes 0 to Right of Screen
-*-----------------------------------------------------------
-* RESET_ENEMY_POSITION:
-*     CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-*     MOVE.W  SCREEN_W,   D1          ; Place Screen width in D1
-*     MOVE.L  D1,         ENEMY_X     ; Enemy X Position
-*     RTS
 
 *-----------------------------------------------------------
 * Subroutine    : Draw
@@ -476,89 +463,10 @@ DRAW_PLYR_DATA:
     MOVE.L  PLAYER_SCORE,D1         ; Move Score to D1.L
     TRAP    #15                     ; Trap (Perform action)
     
-    ; Player X Message
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$0202,     D1          ; Col 02, Row 02
-    TRAP    #15                     ; Trap (Perform action)
-    LEA     X_MSG,      A1          ; X Message
-    MOVE    #13,        D0          ; No Line feed
-    TRAP    #15                     ; Trap (Perform action)
-    
-    ; Player X
-    MOVE.B  #TC_CURSR_P, D0          ; Set Cursor Position
-    MOVE.W  #$0502,     D1          ; Col 05, Row 02
-    TRAP    #15                     ; Trap (Perform action)
-    MOVE.B  #03,        D0          ; Display number at D1.L
-    MOVE.L  PLAYER_X,   D1          ; Move X to D1.L
-    TRAP    #15                     ; Trap (Perform action)
-    
-    ; Player Y Message
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$1002,     D1          ; Col 10, Row 02
-    TRAP    #15                     ; Trap (Perform action)
-    LEA     Y_MSG,      A1          ; Y Message
-    MOVE    #13,        D0          ; No Line feed
-    TRAP    #15                     ; Trap (Perform action)
-    
-    ; Player Y
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$1202,     D1          ; Col 12, Row 02
-    TRAP    #15                     ; Trap (Perform action)
-    MOVE.B  #03,        D0          ; Display number at D1.L
-    MOVE.L  PLAYER_Y,   D1          ; Move X to D1.L
-    TRAP    #15                     ; Trap (Perform action) 
-
-    ; Player Velocity Message
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$0203,     D1          ; Col 02, Row 03
-    TRAP    #15                     ; Trap (Perform action)
-    LEA     V_MSG,      A1          ; Velocity Message
-    MOVE    #13,        D0          ; No Line feed
-    TRAP    #15                     ; Trap (Perform action)
-    
-    ; Player Velocity
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$0503,     D1          ; Col 05, Row 03
-    TRAP    #15                     ; Trap (Perform action)
-    MOVE.B  #03,        D0          ; Display number at D1.L
-    MOVE.L  PLYR_VELOCITY,D1        ; Move X to D1.L
-    TRAP    #15                     ; Trap (Perform action)
-    
-    ; Player Gravity Message
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$1003,     D1          ; Col 10, Row 03
-    TRAP    #15                     ; Trap (Perform action)
-    LEA     G_MSG,      A1          ; G Message
-    MOVE    #13,        D0          ; No Line feed
-    TRAP    #15                     ; Trap (Perform action)
-    
-    ; Player Gravity
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$1203,     D1          ; Col 12, Row 03
-    TRAP    #15                     ; Trap (Perform action)
-    MOVE.B  #03,        D0          ; Display number at D1.L
-    MOVE.L  PLYR_GRAVITY,D1         ; Move Gravity to D1.L
-    TRAP    #15                     ; Trap (Perform action)
-
-    ; Player On Ground Message
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$0204,     D1          ; Col 10, Row 03
-    TRAP    #15                     ; Trap (Perform action)
-    LEA     GND_MSG,    A1          ; On Ground Message
-    MOVE    #13,        D0          ; No Line feed
-    TRAP    #15                     ; Trap (Perform action)
-    
-    ; Player On Ground
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$0604,     D1          ; Col 06, Row 04
-    TRAP    #15                     ; Trap (Perform action)
-    MOVE.B  #03,        D0          ; Display number at D1.L
-    MOVE.L  PLYR_ON_GND,D1          ; Move Play on Ground ? to D1.L
-    TRAP    #15                     ; Trap (Perform action)
-
+  
     ; Show Keys Pressed
     MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$2001,     D1          ; Col 20, Row 1
+    MOVE.W  #$0202,     D1          ; Col 20, Row 1
     TRAP    #15                     ; Trap (Perform action)
     LEA     BASE_LIVES_MSG, A1         ; Keycode
     MOVE    #13,        D0          ; No Line feed
@@ -566,91 +474,17 @@ DRAW_PLYR_DATA:
 
     ; Show KeyCode
     MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$3001,     D1          ; Col 30, Row 1
+    MOVE.W  #$1002,     D1          ; Col 30, Row 1
     TRAP    #15                     ; Trap (Perform action)    
     MOVE.L  BASE_LIVES ,D1          ; Move Key Pressed to D1
     MOVE.B  #03,        D0          ; Display the contents of D1
     TRAP    #15                     ; Trap (Perform action)
 
-    ; Show if Update is Running
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$0205,     D1          ; Col 02, Row 05
-    TRAP    #15                     ; Trap (Perform action)
-    LEA     UPDATE_MSG, A1          ; Update
-    MOVE    #13,        D0          ; No Line feed
-    TRAP    #15                     ; Trap (Perform action)
-
-    ; Show if Draw is Running
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$0206,     D1          ; Col 02, Row 06
-    TRAP    #15                     ; Trap (Perform action)
-    LEA     DRAW_MSG,   A1          ; Draw
-    MOVE    #13,        D0          ; No Line feed
-    TRAP    #15                     ; Trap (Perform action)
-
-    ; Show if Idle is Running
-    MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
-    MOVE.W  #$0207,     D1          ; Col 02, Row 07
-    TRAP    #15                     ; Trap (Perform action)
-    LEA     IDLE_MSG,   A1          ; Move Idle Message to A1
-    MOVE    #13,        D0          ; No Line feed
-    TRAP    #15                     ; Trap (Perform action)
-
+   
     RTS  
-    
-*-----------------------------------------------------------
-* Subroutine    : Player is on Ground
-* Description   : Check if the Player is on or off Ground
-*-----------------------------------------------------------
-IS_PLAYER_ON_GND:
-    ; Check if Player is on Ground
-    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    CLR.L   D2                      ; Clear contents of D2 (XOR is faster)
-    MOVE.W  SCREEN_H,   D1          ; Place Screen width in D1
-    DIVU    #02,        D1          ; divide by 2 for center on Y Axis
-    MOVE.L  PLAYER_Y,   D2          ; Player Y Position
-    CMP     D1,         D2          ; Compare middle of Screen with Players Y Position 
-    BGE     SET_ON_GROUND           ; The Player is on the Ground Plane
-    BLT     SET_OFF_GROUND          ; The Player is off the Ground
-    RTS                             ; Return to subroutine
 
 
-*-----------------------------------------------------------
-* Subroutine    : On Ground
-* Description   : Set the Player On Ground
-*-----------------------------------------------------------
-SET_ON_GROUND:
-    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    MOVE.W  SCREEN_H,   D1          ; Place Screen width in D1
-    DIVU    #02,        D1          ; divide by 2 for center on Y Axis
-    MOVE.L  D1,         PLAYER_Y    ; Reset the Player Y Position
-    CLR.L   D1                      ; Clear contents of D1 (XOR is faster)
-    MOVE.L  #00,        D1          ; Player Velocity
-    MOVE.L  D1,         PLYR_VELOCITY ; Set Player Velocity
-    MOVE.L  #GND_TRUE,  PLYR_ON_GND ; Player is on Ground
-    RTS
 
-*-----------------------------------------------------------
-* Subroutine    : Off Ground
-* Description   : Set the Player Off Ground
-*-----------------------------------------------------------
-SET_OFF_GROUND:
-    MOVE.L  #GND_FALSE, PLYR_ON_GND ; Player if off Ground
-    RTS                             ; Return to subroutine
-*-----------------------------------------------------------
-* Subroutine    : Jump
-* Description   : Perform a Jump
-*-----------------------------------------------------------
-JUMP:
-    CMP.L   #GND_TRUE,PLYR_ON_GND   ; Player is on the Ground ?
-    BEQ     PERFORM_JUMP            ; Do Jump
-    BRA     JUMP_DONE               ;
-PERFORM_JUMP:
-    BSR     PLAY_JUMP               ; Play jump sound
-    MOVE.L  #PLYR_JUMP_V,PLYR_VELOCITY ; Set the players velocity to true
-    RTS                             ; Return to subroutine
-JUMP_DONE:
-    RTS                             ; Return to subroutine
 
 *-----------------------------------------------------------
 * Subroutine    : Idle
@@ -678,10 +512,7 @@ PERFORM_MOVE_RIGHT:
 * Subroutine    : MOVE_LEFT
 * Description   : Perform a move left
 *-----------------------------------------------------------
-* MOVE_LEFT_SHOOT:
-*     ADD.L #01, BEEN_SHOT  ; do actual movement left
-*     BEQ     PERFORM_MOVE_LEFT   ; do actual movement left
-*     BRA     MOVEMENT_DONE      ; RETURN BACK
+
 MOVE_LEFT:
     BEQ     PERFORM_MOVE_LEFT   ; do actual movement left
     BRA     MOVEMENT_DONE      ; RETURN BACK
@@ -941,25 +772,7 @@ DRAW_BULLET:
     RTS                             ; Return to subroutine
 
 
-* DRAW_BASE:
-*     MOVE.L #PURPLE,     D1
-*     MOVE.B  #80,        D0          
-*     TRAP    #15
 
-*     MOVE.L #PURPLE,     D1
-*     MOVE.B  #81,        D0          
-*     TRAP    #15
-
-*     MOVE.L  BULLET_X,    D1          ; X
-*     MOVE.L  BULLET_Y,    D2          ; Y
-*     MOVE.L  BULLET_X,    D3
-*     ADD.L   #100,   D3      ; Width
-*     MOVE.L  BULLET_Y,    D4 
-*     ADD.L   #BULLET_H,   D4      ; Height
-
-*     MOVE.B  #85,        D0          ; Draw Enemy
-*     TRAP    #15                     ; Trap (Perform action)
-    RTS 
 
 *-----------------------------------------------------------
 * Subroutine    : Collision Check
@@ -1016,7 +829,10 @@ CHECK_BULLET_X_GREATER_ENEMY_1_X:
 COLLISION_1:
     BSR     PLAY_OPPS               ; Play Opps Wav
     ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
+
+    
     BSR RESPAWN_BULLET
+    
     BSR RESET_ENEMY_1
     
     BRA     COLLISION_CHECK_DONE
@@ -1056,6 +872,7 @@ COLLISION_2:
     BSR     PLAY_OPPS               ; Play Opps Wav
     ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
 
+    
     BSR RESPAWN_BULLET
     BSR RESET_ENEMY_2
     
@@ -1095,6 +912,7 @@ COLLISION_3:
     BSR     PLAY_OPPS               ; Play Opps Wav
     ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
 
+    
     BSR RESPAWN_BULLET
     BSR RESET_ENEMY_3
     
@@ -1132,6 +950,7 @@ CHECK_BULLET_X_GREATER_ENEMY_4_X:
 COLLISION_4:
     BSR     PLAY_OPPS               ; Play Opps Wav
     ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
+    
     BSR RESPAWN_BULLET
     BSR RESET_ENEMY_4
     
@@ -1169,6 +988,8 @@ CHECK_BULLET_X_GREATER_ENEMY_5_X:
 COLLISION_5:
     BSR     PLAY_OPPS               ; Play Opps Wav
     ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
+    
+    
     BSR RESPAWN_BULLET
     BSR RESET_ENEMY_5
     
@@ -1182,15 +1003,26 @@ COLLISION_CHECK_DONE:               ; No Collision Update points
 
 
 
-* PLAYER_Y_PLUS_H_LTE_TO_ENEMY_Y:     ; Less than or Equal ?
-*      ADD.L   #Bullet_H,D1          ; Add Player Height to D1
-*      MOVE.L  ENEMY_Y,    D2          ; Move Enemy Height to D2  
-*      CMP.L   D1,         D2          ; Do they OverLap ?
-*      BGE     COLLISION               ; Collision !
-*      BRA     COLLISION_CHECK_DONE    ; If not no collision
 
 
+*-----------------------------------------------------------
+* Subroutine    : end screen
+* Description   : can exit program from here or restart
+*-----------------------------------------------------------
+END_SCREEN_LOOP:
+    MOVE.B #8, D0                   ; D0 IS ONLY USED FOR COMMANDS, OUTPUST FROM THIS GOINTO OTHER DATA REGISTERS, THIS WILL BE STORED IN D1 
+    TRAP #15     
+    MOVE.L D1, DELTA_TIME                   ; TRAP 15 RUNS COMMAND 15   
 
+
+END_SCREEN_DELTA_t:
+    MOVE.B #8, D0                   ;CURRENT TIME 
+    TRAP #15  
+    SUB.L DELTA_TIME, D1            ; TAKING AWAY DELTATIME FROM CURRENT TO CHECK REMAINDER, 
+    
+    CMP.L #4, D1
+    BMI.S END_SCREEN_DELTA_t                     ; if deltam time is lesser or equal to 17; branch lesser or equal to 
+    BRA END_SCREEN_LOOP
 *-----------------------------------------------------------
 * Subroutine    : EXIT
 * Description   : Exit message and End Game
