@@ -41,7 +41,7 @@ RUN_INDEX   EQU         00          ; Player Run Sound Index
 JMP_INDEX   EQU         01          ; Player Jump Sound Index  
 OPPS_INDEX  EQU         02          ; Player Opps Sound Index
 
-ENMY_W_INIT EQU         10          ; Enemy initial Width
+ENMY_W_INIT EQU         25          ; Enemy initial Width
 ENMY_H_INIT EQU         10          ; Enemy initial Height
 NUM_OF_ENEMYS    EQU    02          ; number of enemys 
 
@@ -939,16 +939,26 @@ CHECK_BULLET_Y_GREATER_ENEMY_1_Y:
      MOVE.L  ENEMY_1_y,    D2          ; Move Enemy Y to D2
 
      CMP.L   D1,         D2          ; Do they Overlap ?
-     BGE     CHECK_BULLET_X_LESSER_1_WIDTH  ; Less than or Equal
+     BGE     CHECK_BULLET_Y_LESSER_1_HEIGHT  ; Less than or Equal
      BRA     COLLISION_CHECK_DONE    ; If not no collision 
+
+CHECK_BULLET_Y_LESSER_1_HEIGHT:    
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
+    MOVE.L  ENEMY_1_y,    D2          ; Move Enemy Y to D2
+    SUB.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D1,         D2          ; Do they Overlap ?
+    BLE     CHECK_BULLET_X_LESSER_1_WIDTH  ; Less than or Equal
+    BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
 CHECK_BULLET_X_LESSER_1_WIDTH:     ; Check player is not  
     CLR.L   D1
     CLR.L   D2
     MOVE.L   Bullet_X,      D1          ; Move Player Width to D1
     MOVE.L  ENEMY_1_X,           D2          ; Move Enemy X to D2
-    ADD.L   ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
-    CMP.L   D1,             D2          ; Do they OverLap ?
+    ADD.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D2,             D1          ; Do they OverLap ?
     BLE     CHECK_BULLET_X_GREATER_ENEMY_1_X ; Less than or Equal
     BRA     COLLISION_CHECK_DONE    ; If not no collision   
 
@@ -957,16 +967,15 @@ CHECK_BULLET_X_GREATER_ENEMY_1_X:
     CLR.L   D2
     MOVE.L  Bullet_X,   D1          ; Move bullet X to D1
     MOVE.L  ENEMY_1_X,    D2          ; Move Enemy X to D2
-    CMP.L   D1,         D2          ;   Do the Overlap ?
+    CMP.L   D2,         D1          ;   Do the Overlap ?
     BGE     COLLISION_1 ; greater than or equal ?
     BRA     COLLISION_CHECK_DONE    ; If not no collision
+
 COLLISION_1:
     BSR     PLAY_OPPS               ; Play Opps Wav
     MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
 
     BSR RESET_ENEMY_1
-    BSR RESPAWN_BULLET
-    BSR BULLET_TRACK_PLAYER
 
     BRA     COLLISION_CHECK_DONE
 
@@ -977,16 +986,26 @@ CHECK_BULLET_Y_GREATER_ENEMY_2_Y:
      MOVE.L  ENEMY_2_y,    D2          ; Move Enemy Y to D2
 
      CMP.L   D1,         D2          ; Do they Overlap ?
-     BGE     CHECK_BULLET_X_LESSER_2_WIDTH  ; Less than or Equal
+     BGE     CHECK_BULLET_Y_LESSER_2_HEIGHT  ; Less than or Equal
      BRA     COLLISION_CHECK_DONE    ; If not no collision 
+
+CHECK_BULLET_Y_LESSER_2_HEIGHT:    
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
+    MOVE.L  ENEMY_2_y,    D2          ; Move Enemy Y to D2
+    SUB.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D1,         D2          ; Do they Overlap ?
+    BLE     CHECK_BULLET_X_LESSER_2_WIDTH  ; Less than or Equal
+    BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
 CHECK_BULLET_X_LESSER_2_WIDTH:     ; Check player is not  
     CLR.L   D1
     CLR.L   D2
     MOVE.L   Bullet_X,      D1          ; Move Player Width to D1
     MOVE.L  ENEMY_2_X,           D2          ; Move Enemy X to D2
-    ADD.L   ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
-    CMP.L   D1,             D2          ; Do they OverLap ?
+    ADD.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D2,             D1          ; Do they OverLap ?
     BLE     CHECK_BULLET_X_GREATER_ENEMY_2_X ; Less than or Equal
     BRA     COLLISION_CHECK_DONE    ; If not no collision   
 
@@ -995,16 +1014,16 @@ CHECK_BULLET_X_GREATER_ENEMY_2_X:
     CLR.L   D2
     MOVE.L  Bullet_X,   D1          ; Move bullet X to D1
     MOVE.L  ENEMY_2_X,    D2          ; Move Enemy X to D2
-    CMP.L   D1,         D2          ;   Do the Overlap ?
+    CMP.L   D2,         D1          ;   Do the Overlap ?
     BGE     COLLISION_2 ; greater than or equal ?
     BRA     COLLISION_CHECK_DONE    ; If not no collision
 
 COLLISION_2:
     BSR     PLAY_OPPS               ; Play Opps Wav
     MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
+
     BSR RESET_ENEMY_2
-    BSR RESPAWN_BULLET
-    BSR BULLET_TRACK_PLAYER
+
     BRA     COLLISION_CHECK_DONE
 
 CHECK_BULLET_Y_GREATER_ENEMY_3_Y:    
@@ -1014,16 +1033,26 @@ CHECK_BULLET_Y_GREATER_ENEMY_3_Y:
      MOVE.L  ENEMY_3_y,    D2          ; Move Enemy Y to D2
 
      CMP.L   D1,         D2          ; Do they Overlap ?
-     BGE     CHECK_BULLET_X_LESSER_3_WIDTH  ; Less than or Equal
+     BGE     CHECK_BULLET_Y_LESSER_3_HEIGHT  ; Less than or Equal
      BRA     COLLISION_CHECK_DONE    ; If not no collision 
+
+CHECK_BULLET_Y_LESSER_3_HEIGHT:    
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
+    MOVE.L  ENEMY_3_y,    D2          ; Move Enemy Y to D2
+    SUB.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D1,         D2          ; Do they Overlap ?
+    BLE     CHECK_BULLET_X_LESSER_3_WIDTH  ; Less than or Equal
+    BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
 CHECK_BULLET_X_LESSER_3_WIDTH:     ; Check player is not  
     CLR.L   D1
     CLR.L   D2
     MOVE.L   Bullet_X,      D1          ; Move Player Width to D1
     MOVE.L  ENEMY_3_X,           D2          ; Move Enemy X to D2
-    ADD.L   ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
-    CMP.L   D1,             D2          ; Do they OverLap ?
+    ADD.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D2,             D1          ; Do they OverLap ?
     BLE     CHECK_BULLET_X_GREATER_ENEMY_3_X ; Less than or Equal
     BRA     COLLISION_CHECK_DONE    ; If not no collision   
 
@@ -1032,16 +1061,16 @@ CHECK_BULLET_X_GREATER_ENEMY_3_X:
     CLR.L   D2
     MOVE.L  Bullet_X,   D1          ; Move bullet X to D1
     MOVE.L  ENEMY_3_X,    D2          ; Move Enemy X to D2
-    CMP.L   D1,         D2          ;   Do the Overlap ?
+    CMP.L   D2,         D1          ;   Do the Overlap ?
     BGE     COLLISION_3 ; greater than or equal ?
     BRA     COLLISION_CHECK_DONE    ; If not no collision
 
 COLLISION_3:
     BSR     PLAY_OPPS               ; Play Opps Wav
     MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
+
     BSR RESET_ENEMY_3
-    BSR RESPAWN_BULLET
-    BSR BULLET_TRACK_PLAYER
+
     BRA     COLLISION_CHECK_DONE
 
 CHECK_BULLET_Y_GREATER_ENEMY_4_Y:    
@@ -1051,16 +1080,26 @@ CHECK_BULLET_Y_GREATER_ENEMY_4_Y:
      MOVE.L  ENEMY_4_y,    D2          ; Move Enemy Y to D2
 
      CMP.L   D1,         D2          ; Do they Overlap ?
-     BGE     CHECK_BULLET_X_LESSER_4_WIDTH  ; Less than or Equal
+     BGE     CHECK_BULLET_Y_LESSER_4_HEIGHT  ; Less than or Equal
      BRA     COLLISION_CHECK_DONE    ; If not no collision 
+
+CHECK_BULLET_Y_LESSER_4_HEIGHT:    
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
+    MOVE.L  ENEMY_4_y,    D2          ; Move Enemy Y to D2
+    SUB.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D1,         D2          ; Do they Overlap ?
+    BLE     CHECK_BULLET_X_LESSER_4_WIDTH  ; Less than or Equal
+    BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
 CHECK_BULLET_X_LESSER_4_WIDTH:     ; Check player is not  
     CLR.L   D1
     CLR.L   D2
     MOVE.L   Bullet_X,      D1          ; Move Player Width to D1
     MOVE.L  ENEMY_4_X,           D2          ; Move Enemy X to D2
-    ADD.L   ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
-    CMP.L   D1,             D2          ; Do they OverLap ?
+    ADD.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D2,             D1          ; Do they OverLap ?
     BLE     CHECK_BULLET_X_GREATER_ENEMY_4_X ; Less than or Equal
     BRA     COLLISION_CHECK_DONE    ; If not no collision   
 
@@ -1069,16 +1108,16 @@ CHECK_BULLET_X_GREATER_ENEMY_4_X:
     CLR.L   D2
     MOVE.L  Bullet_X,   D1          ; Move bullet X to D1
     MOVE.L  ENEMY_4_X,    D2          ; Move Enemy X to D2
-    CMP.L   D1,         D2          ;   Do the Overlap ?
+    CMP.L   D2,         D1          ;   Do the Overlap ?
     BGE     COLLISION_4 ; greater than or equal ?
     BRA     COLLISION_CHECK_DONE    ; If not no collision
 
 COLLISION_4:
     BSR     PLAY_OPPS               ; Play Opps Wav
     MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
+
     BSR RESET_ENEMY_4
-    BSR RESPAWN_BULLET
-    BSR BULLET_TRACK_PLAYER
+
     BRA     COLLISION_CHECK_DONE
 
 CHECK_BULLET_Y_GREATER_ENEMY_5_Y:    
@@ -1088,16 +1127,26 @@ CHECK_BULLET_Y_GREATER_ENEMY_5_Y:
      MOVE.L  ENEMY_5_y,    D2          ; Move Enemy Y to D2
 
      CMP.L   D1,         D2          ; Do they Overlap ?
-     BGE     CHECK_BULLET_X_LESSER_5_WIDTH  ; Less than or Equal
+     BGE     CHECK_BULLET_Y_LESSER_5_HEIGHT  ; Less than or Equal
      BRA     COLLISION_CHECK_DONE    ; If not no collision 
+
+CHECK_BULLET_Y_LESSER_5_HEIGHT:    
+    CLR.L   D1
+    CLR.L   D2
+    MOVE.L  Bullet_Y,   D1          ; Move Player Y to D1
+    MOVE.L  ENEMY_5_y,    D2          ; Move Enemy Y to D2
+    SUB.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D1,         D2          ; Do they Overlap ?
+    BLE     CHECK_BULLET_X_LESSER_5_WIDTH  ; Less than or Equal
+    BRA     COLLISION_CHECK_DONE    ; If not no collision 
 
 CHECK_BULLET_X_LESSER_5_WIDTH:     ; Check player is not  
     CLR.L   D1
     CLR.L   D2
     MOVE.L   Bullet_X,      D1          ; Move Player Width to D1
     MOVE.L  ENEMY_5_X,           D2          ; Move Enemy X to D2
-    ADD.L   ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
-    CMP.L   D1,             D2          ; Do they OverLap ?
+    ADD.L   #ENMY_W_INIT,    D2         ; add enemy width to its x position to get its right corner position
+    CMP.L   D2,             D1          ; Do they OverLap ?
     BLE     CHECK_BULLET_X_GREATER_ENEMY_5_X ; Less than or Equal
     BRA     COLLISION_CHECK_DONE    ; If not no collision   
 
@@ -1106,16 +1155,16 @@ CHECK_BULLET_X_GREATER_ENEMY_5_X:
     CLR.L   D2
     MOVE.L  Bullet_X,   D1          ; Move bullet X to D1
     MOVE.L  ENEMY_5_X,    D2          ; Move Enemy X to D2
-    CMP.L   D1,         D2          ;   Do the Overlap ?
+    CMP.L   D2,         D1          ;   Do the Overlap ?
     BGE     COLLISION_5 ; greater than or equal ?
     BRA     COLLISION_CHECK_DONE    ; If not no collision
 
 COLLISION_5:
     BSR     PLAY_OPPS               ; Play Opps Wav
     MOVE.L  #00, PLAYER_SCORE       ; Reset Player Score
+
     BSR RESET_ENEMY_5
-    BSR RESPAWN_BULLET
-    BSR BULLET_TRACK_PLAYER
+
     BRA     COLLISION_CHECK_DONE
 
 
