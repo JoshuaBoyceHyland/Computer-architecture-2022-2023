@@ -32,9 +32,10 @@ PLYR_POS_MOVEMENT EQU   01          ; player movement
 GND_TRUE    EQU         01          ; Player on Ground True
 GND_FALSE   EQU         00          ; Player on Ground False
 
-SCORE_INDEX   EQU       00          ; Player Run Sound Index  
+SCORE_INDEX       EQU   00          ; Player Run Sound Index  
 EXPLOSION_INDEX   EQU   01          ; Player Jump Sound Index  
 GAME_START_INDEX  EQU   02          ; Player Opps Sound Index
+GAME_OVER_INDEX   EQU   03
 
 ENMY_W_INIT EQU         30          ; Enemy initial Width
 ENMY_H_INIT EQU         10          ; Enemy initial Height
@@ -76,9 +77,10 @@ BULLET_SPEED    EQU         80          ; speed for bullet
 *-----------------------------------------------------------
 INITIALISE:
     ; Initialise Sounds
-    BSR     SCORE_LOAD                ; Load Run Sound into Memory
-    BSR     EXPLOSION_LOAD               ; Load Jump Sound into Memory
-    BSR     GAME_START_LOAD               ; Load Opps (Collision) Sound into Memory
+    BSR     SCORE_LOAD                
+    BSR     EXPLOSION_LOAD              
+    BSR     GAME_START_LOAD               
+    BSR     GAME_OVER_LOAD
 
     ; Screen Size
     MOVE.B  #TC_SCREEN, D0          ; access screen information
@@ -130,7 +132,7 @@ INITIALISE:
     MOVE.B D1, ENEMY_MOVING_R ; makes false so is moving left to start
 
     CLR.L D1
-    MOVE.L #01, D1
+    MOVE.L #10, D1
     MOVE.L D1, BASE_LIVES 
     ; Enable the screen back buffer(see easy 68k help)
 	MOVE.B  #TC_DBL_BUF,D0          ; 92 Enables Double Buffer
@@ -227,10 +229,12 @@ GAME_DELTA_t:
 *checks if base lives has is higher than -
 CHECK_FOR_EXIT:
     CMP.L #0, BASE_LIVES
-    BLE END_SCREEN_LOOP
+    BLE END_SCREEN_TRANSITION
     RTS
 
-
+END_SCREEN_TRANSITION:
+    BSR PLAY_GAME_OVER
+    BSR END_SCREEN_LOOP
 
 UPDATE_BULLET:
     BSR CHECK_FOR_BULLET_RESPAWN
@@ -598,10 +602,14 @@ EXPLOSION_LOAD:
     RTS                             ; Return to subroutine
 
 PLAY_EXPLOSION:
+    CMP.L #2, BASE_LIVES            ; this is so the game over sound wil lplay and not be cut of my explosion 
+    BGE   PLAY_EXPLOSION_SOUND
+    RTS                             ; Return to subroutine
+
+PLAY_EXPLOSION_SOUND:
     MOVE    #EXPLOSION_INDEX, D1          ; Load Sound INDEX
     MOVE    #72,        D0          ; Play Sound
     TRAP    #15                     ; Trap (Perform action)
-    RTS                             ; Return to subroutine
 
 GAME_START_LOAD:
     LEA     GAME_START_WAV,   A1          ; Load Wav File into A1
@@ -612,6 +620,19 @@ GAME_START_LOAD:
 
 PLAY_GAME_START:
     MOVE    #GAME_START_INDEX,D1          ; Load Sound INDEX
+    MOVE    #72,        D0          ; Play Sound
+    TRAP    #15                     ; Trap (Perform action)
+    RTS                             ; Return to subroutine
+
+GAME_OVER_LOAD:
+    LEA     GAME_OVER_WAV,   A1          ; Load Wav File into A1
+    MOVE    #GAME_OVER_INDEX,D1          ; Assign it INDEX
+    MOVE    #71,        D0          ; Load into memory
+    TRAP    #15                     ; Trap (Perform action)
+    RTS                             ; Return to subroutine
+
+PLAY_GAME_OVER:
+    MOVE    #GAME_OVER_INDEX,D1          ; Load Sound INDEX
     MOVE    #72,        D0          ; Play Sound
     TRAP    #15                     ; Trap (Perform action)
     RTS                             ; Return to subroutine
@@ -1032,23 +1053,11 @@ COLLISION_CHECK_DONE:               ; No Collision Update points
 * Subroutine    : end screen
 * Description   : can exit program from here or restart
 *-----------------------------------------------------------
-END_SCREEN_LOOP:
-    * MOVE.B #8, D0                   ; D0 IS ONLY USED FOR COMMANDS, OUTPUST FROM THIS GOINTO OTHER DATA REGISTERS, THIS WILL BE STORED IN D1 
-    * TRAP #15     
-    * MOVE.L D1, DELTA_TIME                   ; TRAP 15 RUNS COMMAND 15   
-
+END_SCREEN_LOOP:  
+    
     BSR CHECK_INPUTS
     BSR END_SCREEN_DRAW
     BSR END_SCREEN_LOOP
-
-* END_SCREEN_DELTA_t:
-*     MOVE.B #8, D0                   ;CURRENT TIME 
-*     TRAP #15  
-*     SUB.L DELTA_TIME, D1            ; TAKING AWAY DELTATIME FROM CURRENT TO CHECK REMAINDER, 
-    
-*     CMP.L #4, D1
-*     BMI.S END_SCREEN_DELTA_t                     ; if deltam time is lesser or equal to 17; branch lesser or equal to 
-*     BRA END_SCREEN_LOOP
 
 
 END_SCREEN_DRAW:
@@ -1065,20 +1074,23 @@ END_SCREEN_DRAW:
     
 CHECK_INPUTS:
 
-    ; Process Input
     CLR.L   D1                      ; Clear Data Register
     MOVE.B  #TC_KEYCODE,D0          ; Listen for Keys
-    MOVE.L  #$72782233,  D1            ; ALL THE INPUTS PUT IN D1 WASD, IN ONE BYTE
-    TRAP    #15                      ; DEXCUTES ABOVE AND CHECKS IF ny have been pushed
+    MOVE.L #$20005300,D1            ; ALL THE INPUTS PUT IN D1 WASD, IN ONE BYTE
+    TRAP   #15                      ; DEXCUTES ABOVE AND CHECKS IF ny have been pushed
 
    * CHECKS CORRESPONG NUMBERS ARE BEING PRESSED
-    CMP.L  #$FF000000, D1           ; R
+
+
+    CMP.L  #$FF000000, D1           ; SPACE
     BEQ    INITIALISE
 
-    CMP.L  #$00FF0000, D1           ; X
+
+
+    CMP.L  #$0000FF00, D1           ; S
     BEQ    EXIT
-    
-    RTS
+
+    RTS                             ; Return to subroutine
 
 
 DRAW_GAME_OVER_MSGS:
@@ -1120,6 +1132,8 @@ DRAW_GAME_OVER_MSGS:
 * Description   : Exit message and End Game
 *-----------------------------------------------------------
 EXIT:
+
+
     ; Show if Exiting is Running
     MOVE.B  #TC_CURSR_P,D0          ; Set Cursor Position
     MOVE.W  #$4004,     D1          ; Col 40, Row 1
@@ -1131,21 +1145,24 @@ EXIT:
     TRAP    #15                     ; Trap (Perform action)
     SIMHALT
 
-*-----------------------------------------------------------
-* Section       : Messages
-* Description   : Messages to Print on Console, names should be
-* self documenting
-*-----------------------------------------------------------
 
 * BASICALLY VARIABLES DECALRED AT BTTOM 
 * dc.b is text
 * ds.b is number 
 * becarefull how you store l/b, long/byte
 
+*-----------------------------------------------------------
+* Section       : Messages
+* Description   : Messages to Print on Console, names should be
+* self documenting
+*-----------------------------------------------------------
+
+
+
 SCORE_MSG               DC.B     'Score : ', 0  
 BASE_LIVES_MSG          DC.B     'Base lives : ', 0     ; Keycode Message
-GAME_OVER_RESTART_MSG   DC.B     'Press R to restart', 0
-GAME_OVER_EXIT_MSG      DC.B     'Press X to exit', 0
+GAME_OVER_RESTART_MSG   DC.B     'Press Space to restart', 0
+GAME_OVER_EXIT_MSG      DC.B     'Press S to stimhalt', 0
 
 EXIT_MSG        DC.B    'Exiting....', 0    ; Exit Message
 
@@ -1179,7 +1196,7 @@ BEEN_SHOT       DS.L    01      ; reserve of space
 * Section       : Base lives
 * Description   : Used for storing bases current lives
 *-----------------------------------------------------------
-BASE_LIVES      DS.L    01  ; Reserve Space for Current Key Pressed
+BASE_LIVES      DS.L    01  ; 
 *-----------------------------------------------------------
 * Section       : Character Positions
 * Description   : Player and Enemy Position Memory Locations
@@ -1230,9 +1247,10 @@ DELTA_TIME      DS.L   01 ; empty
 * so keep the files small. Used https://voicemaker.in/ to 
 * generate and Audacity to convert MP3 to WAV
 *-----------------------------------------------------------
-EXPLOSION_WAV   DC.B    'explosion.wav',0        
-SCORE_WAV         DC.B    'score.wav',0        
-GAME_START_WAV        DC.B    'game_start.wav',0        
+EXPLOSION_WAV       DC.B    'explosion.wav',0        
+SCORE_WAV           DC.B    'score.wav',0        
+GAME_START_WAV      DC.B    'game_start.wav',0 
+GAME_OVER_WAV       DC.B    'game_over.wav', 0 
 
     END    START        ; last line of source
 
