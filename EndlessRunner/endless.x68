@@ -32,9 +32,9 @@ PLYR_POS_MOVEMENT EQU   01          ; player movement
 GND_TRUE    EQU         01          ; Player on Ground True
 GND_FALSE   EQU         00          ; Player on Ground False
 
-RUN_INDEX   EQU         00          ; Player Run Sound Index  
-JMP_INDEX   EQU         01          ; Player Jump Sound Index  
-OPPS_INDEX  EQU         02          ; Player Opps Sound Index
+SCORE_INDEX   EQU       00          ; Player Run Sound Index  
+EXPLOSION_INDEX   EQU   01          ; Player Jump Sound Index  
+GAME_START_INDEX  EQU   02          ; Player Opps Sound Index
 
 ENMY_W_INIT EQU         30          ; Enemy initial Width
 ENMY_H_INIT EQU         10          ; Enemy initial Height
@@ -76,9 +76,9 @@ BULLET_SPEED    EQU         80          ; speed for bullet
 *-----------------------------------------------------------
 INITIALISE:
     ; Initialise Sounds
-    BSR     RUN_LOAD                ; Load Run Sound into Memory
-    BSR     JUMP_LOAD               ; Load Jump Sound into Memory
-    BSR     OPPS_LOAD               ; Load Opps (Collision) Sound into Memory
+    BSR     SCORE_LOAD                ; Load Run Sound into Memory
+    BSR     EXPLOSION_LOAD               ; Load Jump Sound into Memory
+    BSR     GAME_START_LOAD               ; Load Opps (Collision) Sound into Memory
 
     ; Screen Size
     MOVE.B  #TC_SCREEN, D0          ; access screen information
@@ -130,7 +130,7 @@ INITIALISE:
     MOVE.B D1, ENEMY_MOVING_R ; makes false so is moving left to start
 
     CLR.L D1
-    MOVE.L #50, D1
+    MOVE.L #01, D1
     MOVE.L D1, BASE_LIVES 
     ; Enable the screen back buffer(see easy 68k help)
 	MOVE.B  #TC_DBL_BUF,D0          ; 92 Enables Double Buffer
@@ -186,9 +186,7 @@ INITIALISE_ENEMYS:
     SUB.L   #400, D1
     MOVE.L  D1,         ENEMY_5_Y     ; Enemy X Position
 
-    * CLR.L   D1
-    * MOVE.L  #5,    D1
-    * MOVE.L  D1,     ENEMY_SPEED
+    
 
 
 
@@ -199,7 +197,7 @@ INITIALISE_ENEMYS:
 * (Input, Update, Draw). The Enemies Run at Player Jump to Avoid
 *-----------------------------------------------------------
 GAME:
-    BSR     PLAY_RUN                ; Play Run Wav
+    BSR     PLAY_GAME_START             ; Play Run Wav
 GAMELOOP:
     ; Main Gameloop
     MOVE.B #8, D0                   ; D0 IS ONLY USED FOR COMMANDS, OUTPUST FROM THIS GOINTO OTHER DATA REGISTERS, THIS WILL BE STORED IN D1 
@@ -274,9 +272,11 @@ CHECK_ENEMY_RESET_1:
     RTS
 
 ENEMY_1_REACHED_BASE:
+    BSR PLAY_EXPLOSION
     SUB.L #01, BASE_LIVES
 RESET_ENEMY_1:
-    MOVE.L #0, ENEMY_1_Y
+    BSR RANDOM_Y_POS
+    MOVE.L D1, ENEMY_1_Y
     RTS
 
 CHECK_ENEMY_RESET_2:
@@ -291,9 +291,11 @@ CHECK_ENEMY_RESET_2:
     RTS
 
 ENEMY_2_REACHED_BASE:
+    BSR PLAY_EXPLOSION
     SUB.L #01, BASE_LIVES
 RESET_ENEMY_2:
-    MOVE.L #0, ENEMY_2_Y
+    BSR RANDOM_Y_POS
+    MOVE.L D1, ENEMY_2_Y
     RTS
 
 CHECK_ENEMY_RESET_3:
@@ -308,9 +310,11 @@ CHECK_ENEMY_RESET_3:
     RTS
     
 ENEMY_3_REACHED_BASE:
+    BSR PLAY_EXPLOSION
     SUB.L #01, BASE_LIVES
 RESET_ENEMY_3:
-    MOVE.L #0, ENEMY_3_Y
+    BSR RANDOM_Y_POS
+    MOVE.L D1, ENEMY_3_Y
     RTS
 
 CHECK_ENEMY_RESET_4:
@@ -325,9 +329,11 @@ CHECK_ENEMY_RESET_4:
     RTS
 
 ENEMY_4_REACHED_BASE:
+    BSR PLAY_EXPLOSION
     SUB.L #01, BASE_LIVES
 RESET_ENEMY_4:
-    MOVE.L #0, ENEMY_4_Y
+    BSR RANDOM_Y_POS
+    MOVE.L D1, ENEMY_4_Y
     RTS
 
 CHECK_ENEMY_RESET_5:
@@ -342,10 +348,39 @@ CHECK_ENEMY_RESET_5:
     RTS
 
 ENEMY_5_REACHED_BASE:
+    BSR PLAY_EXPLOSION
     SUB.L #01, BASE_LIVES
 RESET_ENEMY_5:
-    MOVE.L #0, ENEMY_5_Y
+    
+    BSR RANDOM_Y_POS
+    MOVE.L D1, ENEMY_5_Y
     RTS
+
+RANDOM_Y_POS:
+
+    MOVE.B #8, D0 ; loads current time ( 100s seconds since midnight)
+    TRAP   #15
+
+    AND.L #$5FFFFF, D1 ; AND 6 Bits to prevent any overflow 
+
+    DIVU #400, D1 ; for number range
+
+    SWAP D1       ; SWAP Higher Order Word and Lower Order Word in D1
+
+    ADDQ.W #1, D1 ; generate number from 
+
+    MOVE.W D1, D2 ; get number from d1.w 
+
+    CLR.L D1
+
+    MOVE.W D2, D1
+
+    SUB.L D2, D1 ; makes it y pos zero
+
+    SUB.L D2, D1 ; makes y pos minus so it spawns above screen
+
+    RTS
+
 
 CHECK_FOR_BULLET_RESPAWN:
     CMP.L #0, BULLET_Y
@@ -483,18 +518,6 @@ DRAW_PLYR_DATA:
    
     RTS  
 
-
-
-
-*-----------------------------------------------------------
-* Subroutine    : Idle
-* Description   : Perform a Idle
-*----------------------------------------------------------- 
-IDLE:
-    BSR     PLAY_RUN                ; Play Run Wav
-    RTS                             ; Return to subroutine
-
-
 *-----------------------------------------------------------
 * Subroutine    : MOVE_RIGHT
 * Description   : Perform a move right
@@ -554,41 +577,41 @@ MOVEMENT_DONE:
 * Description   : Initialise game sounds into memory 
 * Current Sounds are RUN, JUMP and Opps for Collision
 *-----------------------------------------------------------
-RUN_LOAD:
-    LEA     RUN_WAV,    A1          ; Load Wav File into A1
-    MOVE    #RUN_INDEX, D1          ; Assign it INDEX
+SCORE_LOAD:
+    LEA     SCORE_WAV,    A1          ; Load Wav File into A1
+    MOVE    #SCORE_INDEX, D1          ; Assign it INDEX
     MOVE    #71,        D0          ; Load into memory
     TRAP    #15                     ; Trap (Perform action)
     RTS                             ; Return to subroutine
 
-PLAY_RUN:
-    MOVE    #RUN_INDEX, D1          ; Load Sound INDEX
+PLAY_SCORE_EFFECT:
+    MOVE    #SCORE_INDEX, D1          ; Load Sound INDEX
     MOVE    #72,        D0          ; Play Sound
     TRAP    #15                     ; Trap (Perform action)
     RTS                             ; Return to subroutine
 
-JUMP_LOAD:
-    LEA     JUMP_WAV,   A1          ; Load Wav File into A1
-    MOVE    #JMP_INDEX, D1          ; Assign it INDEX
+EXPLOSION_LOAD:
+    LEA     EXPLOSION_WAV,   A1          ; Load Wav File into A1
+    MOVE    #EXPLOSION_INDEX, D1          ; Assign it INDEX
     MOVE    #71,        D0          ; Load into memory
     TRAP    #15                     ; Trap (Perform action)
     RTS                             ; Return to subroutine
 
-PLAY_JUMP:
-    MOVE    #JMP_INDEX, D1          ; Load Sound INDEX
+PLAY_EXPLOSION:
+    MOVE    #EXPLOSION_INDEX, D1          ; Load Sound INDEX
     MOVE    #72,        D0          ; Play Sound
     TRAP    #15                     ; Trap (Perform action)
     RTS                             ; Return to subroutine
 
-OPPS_LOAD:
-    LEA     OPPS_WAV,   A1          ; Load Wav File into A1
-    MOVE    #OPPS_INDEX,D1          ; Assign it INDEX
+GAME_START_LOAD:
+    LEA     GAME_START_WAV,   A1          ; Load Wav File into A1
+    MOVE    #GAME_START_INDEX,D1          ; Assign it INDEX
     MOVE    #71,        D0          ; Load into memory
     TRAP    #15                     ; Trap (Perform action)
     RTS                             ; Return to subroutine
 
-PLAY_OPPS:
-    MOVE    #OPPS_INDEX,D1          ; Load Sound INDEX
+PLAY_GAME_START:
+    MOVE    #GAME_START_INDEX,D1          ; Load Sound INDEX
     MOVE    #72,        D0          ; Play Sound
     TRAP    #15                     ; Trap (Perform action)
     RTS                             ; Return to subroutine
@@ -827,12 +850,10 @@ CHECK_BULLET_X_GREATER_ENEMY_1_X:
     BRA     COLLISION_CHECK_DONE    ; If not no collision
 
 COLLISION_1:
-    BSR     PLAY_OPPS               ; Play Opps Wav
     ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
 
-    
     BSR RESPAWN_BULLET
-    
+    BSR PLAY_SCORE_EFFECT
     BSR RESET_ENEMY_1
     
     BRA     COLLISION_CHECK_DONE
@@ -869,11 +890,11 @@ CHECK_BULLET_X_GREATER_ENEMY_2_X:
     BRA     COLLISION_CHECK_DONE    ; If not no collision
 
 COLLISION_2:
-    BSR     PLAY_OPPS               ; Play Opps Wav
     ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
 
     
     BSR RESPAWN_BULLET
+    BSR PLAY_SCORE_EFFECT
     BSR RESET_ENEMY_2
     
     BRA     COLLISION_CHECK_DONE
@@ -909,11 +930,11 @@ CHECK_BULLET_X_GREATER_ENEMY_3_X:
     BRA     COLLISION_CHECK_DONE    ; If not no collision
 
 COLLISION_3:
-    BSR     PLAY_OPPS               ; Play Opps Wav
     ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
 
     
     BSR RESPAWN_BULLET
+    BSR PLAY_SCORE_EFFECT
     BSR RESET_ENEMY_3
     
     BRA     COLLISION_CHECK_DONE
@@ -948,12 +969,14 @@ CHECK_BULLET_X_GREATER_ENEMY_4_X:
     BRA     COLLISION_CHECK_DONE    ; If not no collision
 
 COLLISION_4:
-    BSR     PLAY_OPPS               ; Play Opps Wav
     ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
     
+
     BSR RESPAWN_BULLET
+    BSR PLAY_SCORE_EFFECT
     BSR RESET_ENEMY_4
     
+
     BRA     COLLISION_CHECK_DONE
 
 CHECK_BULLET_Y_GREATER_ENEMY_5_Y:    
@@ -986,11 +1009,11 @@ CHECK_BULLET_X_GREATER_ENEMY_5_X:
     BRA     COLLISION_CHECK_DONE    ; If not no collision
 
 COLLISION_5:
-    BSR     PLAY_OPPS               ; Play Opps Wav
     ADD.L  #01, PLAYER_SCORE       ; adds to Player Score
     
     
     BSR RESPAWN_BULLET
+    BSR PLAY_SCORE_EFFECT
     BSR RESET_ENEMY_5
     
     BRA     COLLISION_CHECK_DONE
@@ -1010,19 +1033,88 @@ COLLISION_CHECK_DONE:               ; No Collision Update points
 * Description   : can exit program from here or restart
 *-----------------------------------------------------------
 END_SCREEN_LOOP:
-    MOVE.B #8, D0                   ; D0 IS ONLY USED FOR COMMANDS, OUTPUST FROM THIS GOINTO OTHER DATA REGISTERS, THIS WILL BE STORED IN D1 
-    TRAP #15     
-    MOVE.L D1, DELTA_TIME                   ; TRAP 15 RUNS COMMAND 15   
+    * MOVE.B #8, D0                   ; D0 IS ONLY USED FOR COMMANDS, OUTPUST FROM THIS GOINTO OTHER DATA REGISTERS, THIS WILL BE STORED IN D1 
+    * TRAP #15     
+    * MOVE.L D1, DELTA_TIME                   ; TRAP 15 RUNS COMMAND 15   
 
+    BSR CHECK_INPUTS
+    BSR END_SCREEN_DRAW
+    BSR END_SCREEN_LOOP
 
-END_SCREEN_DELTA_t:
-    MOVE.B #8, D0                   ;CURRENT TIME 
-    TRAP #15  
-    SUB.L DELTA_TIME, D1            ; TAKING AWAY DELTATIME FROM CURRENT TO CHECK REMAINDER, 
+* END_SCREEN_DELTA_t:
+*     MOVE.B #8, D0                   ;CURRENT TIME 
+*     TRAP #15  
+*     SUB.L DELTA_TIME, D1            ; TAKING AWAY DELTATIME FROM CURRENT TO CHECK REMAINDER, 
     
-    CMP.L #4, D1
-    BMI.S END_SCREEN_DELTA_t                     ; if deltam time is lesser or equal to 17; branch lesser or equal to 
-    BRA END_SCREEN_LOOP
+*     CMP.L #4, D1
+*     BMI.S END_SCREEN_DELTA_t                     ; if deltam time is lesser or equal to 17; branch lesser or equal to 
+*     BRA END_SCREEN_LOOP
+
+
+END_SCREEN_DRAW:
+     ; Enable back buffer
+    MOVE.B  #94,        D0
+    TRAP    #15
+
+    ; Clear the screen
+    MOVE.B	#TC_CURSR_P,D0          ; Set Cursor Position
+	MOVE.W	#$FF00,     D1          ; Clear contents
+	TRAP    #15                     ; Trap (Perform action)
+
+    BSR DRAW_GAME_OVER_MSGS
+    
+CHECK_INPUTS:
+
+    ; Process Input
+    CLR.L   D1                      ; Clear Data Register
+    MOVE.B  #TC_KEYCODE,D0          ; Listen for Keys
+    MOVE.L  #$72782233,  D1            ; ALL THE INPUTS PUT IN D1 WASD, IN ONE BYTE
+    TRAP    #15                      ; DEXCUTES ABOVE AND CHECKS IF ny have been pushed
+
+   * CHECKS CORRESPONG NUMBERS ARE BEING PRESSED
+    CMP.L  #$FF000000, D1           ; R
+    BEQ    INITIALISE
+
+    CMP.L  #$00FF0000, D1           ; X
+    BEQ    EXIT
+    
+    RTS
+
+
+DRAW_GAME_OVER_MSGS:
+
+
+    MOVE.B  #TC_CURSR_P,D0          
+    MOVE.W  #$1910,     D1          
+    TRAP    #15                   
+    LEA     SCORE_MSG,  A1       
+    MOVE    #13,        D0         
+    TRAP    #15                     
+
+    MOVE.B  #TC_CURSR_P,D0         
+    MOVE.W  #$2410,     D1   
+    TRAP    #15                     
+    MOVE.B  #03,        D0          
+    MOVE.L  PLAYER_SCORE,D1         
+    TRAP    #15    
+
+    MOVE.B  #TC_CURSR_P,D0          
+    MOVE.W  #$1912,     D1        
+    TRAP    #15                    
+    LEA     GAME_OVER_RESTART_MSG,  A1          
+    MOVE    #13,        D0          
+    TRAP    #15   
+
+    MOVE.B  #TC_CURSR_P,D0          
+    MOVE.W  #$1914,     D1        
+    TRAP    #15                    
+    LEA     GAME_OVER_EXIT_MSG,  A1          
+    MOVE    #13,        D0          
+    TRAP    #15                     
+
+                     
+
+    RTS
 *-----------------------------------------------------------
 * Subroutine    : EXIT
 * Description   : Exit message and End Game
@@ -1050,19 +1142,10 @@ EXIT:
 * ds.b is number 
 * becarefull how you store l/b, long/byte
 
-SCORE_MSG           DC.B     'Score : ', 0  
-BASE_LIVES_MSG      DC.B     'Base lives : ', 0     ; Keycode Message
-JUMP_MSG            DC.B    'Jump....', 0       ; Jump Message
-
-IDLE_MSG        DC.B    'Idle....', 0       ; Idle Message
-UPDATE_MSG      DC.B    'Update....', 0     ; Update Message
-DRAW_MSG        DC.B    'Draw....', 0       ; Draw Message
-
-X_MSG           DC.B    'X:', 0             ; X Position Message
-Y_MSG           DC.B    'Y:', 0             ; Y Position Message
-V_MSG           DC.B    'V:', 0             ; Velocity Position Message
-G_MSG           DC.B    'G:', 0             ; Gravity Position Message
-GND_MSG         DC.B    'GND:', 0           ; On Ground Position Message
+SCORE_MSG               DC.B     'Score : ', 0  
+BASE_LIVES_MSG          DC.B     'Base lives : ', 0     ; Keycode Message
+GAME_OVER_RESTART_MSG   DC.B     'Press R to restart', 0
+GAME_OVER_EXIT_MSG      DC.B     'Press X to exit', 0
 
 EXIT_MSG        DC.B    'Exiting....', 0    ; Exit Message
 
@@ -1090,6 +1173,8 @@ SCREEN_H        DS.W    01  ; Reserve Space for Screen Height
 * 1 = true
 *-----------------------------------------------------------
 BEEN_SHOT       DS.L    01      ; reserve of space
+
+
 *-----------------------------------------------------------
 * Section       : Base lives
 * Description   : Used for storing bases current lives
@@ -1145,9 +1230,9 @@ DELTA_TIME      DS.L   01 ; empty
 * so keep the files small. Used https://voicemaker.in/ to 
 * generate and Audacity to convert MP3 to WAV
 *-----------------------------------------------------------
-JUMP_WAV        DC.B    'jump.wav',0        ; Jump Sound
-RUN_WAV         DC.B    'run.wav',0         ; Run Sound
-OPPS_WAV        DC.B    'opps.wav',0        ; Collision Opps
+EXPLOSION_WAV   DC.B    'explosion.wav',0        
+SCORE_WAV         DC.B    'score.wav',0        
+GAME_START_WAV        DC.B    'game_start.wav',0        
 
     END    START        ; last line of source
 
@@ -1158,3 +1243,5 @@ OPPS_WAV        DC.B    'opps.wav',0        ; Collision Opps
 *~Font size~10~
 *~Tab type~1~
 *~Tab size~4~
+
+
